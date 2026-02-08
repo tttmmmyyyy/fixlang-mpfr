@@ -3,6 +3,15 @@
 // This is a wrapper for the GNU MPFR (Multiple Precision Floating-Point Reliable) Library.
 module MPFR;
 
+import Std::{
+    unsafe_is_unique, Add, Bool, Div, Eq, F64, I64, IO, LessThan, LessThanOrEq, Mul, Neg, Option, Ptr, 
+    String, Sub, ToString, U64, Zero, Array::to_iter, 
+    FFI::{CInt, Destructor, Destructor::{borrow, make, mutate_unique}}, IO::unsafe_perform, 
+    Iterator::fold, LessThan::max, Monad::pure, Option::{none, some}, String::borrow_c_str, 
+    ToCInt::c_int, ToCLong::c_long, ToCUnsignedLong::c_unsigned_long, ToI64::i64, ToString::to_string, 
+    Tuple2::@0
+};
+
 // Precision type for MPFR numbers (in bits).
 type Precision = I64;
 
