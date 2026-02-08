@@ -1,0 +1,468 @@
+// Provides arbitrary-precision floating-point type `MPFR` and related functions.
+// 
+// This is a wrapper for the GNU MPFR (Multiple Precision Floating-Point Reliable) Library.
+module MPFR;
+
+// Precision type for MPFR numbers (in bits).
+type Precision = I64;
+
+// A pointer to struct `__mpfr_struct`.
+type MPFRHandle = Ptr;
+
+// Size of `__mpfr_struct`.
+// On 64-bit systems, this is typically 32 bytes.
+c_SIZE_OF_MPFR : CInt;
+c_SIZE_OF_MPFR = 32.c_int;
+
+// Rounding mode for MPFR operations.
+type RoundMode = unbox union {
+    rndn : (),  // Round to Nearest (ties to even)
+    rndz : (),  // Round toward Zero
+    rndu : (),  // Round toward positive infinity
+    rndd : (),  // Round toward negative infinity
+    rnda : ()   // Round Away from zero
+};
+
+namespace RoundMode {
+    // Convert RoundMode to C integer constant.
+    to_c_rnd : RoundMode -> CInt;
+    to_c_rnd = |rnd| (
+        match rnd {
+            rndn(_) => 0.c_int,
+            rndz(_) => 1.c_int,
+            rndu(_) => 2.c_int,
+            rndd(_) => 3.c_int,
+            rnda(_) => 4.c_int,
+        }
+    );
+}
+
+namespace MPFRHandle {
+    // Construct MPFRHandle by MPFR's initialization function with precision.
+    _construct_by : Precision -> (MPFRHandle -> IO a) -> IO (MPFRHandle, a);
+    _construct_by = |prec, ctor| (
+        let handle = *FFI_CALL_IO[Ptr malloc(CInt), c_SIZE_OF_MPFR];
+        FFI_CALL_IO[() mpfr_init2(Ptr, CLong), handle, prec.c_long];;
+        let res = *ctor(handle);
+        pure $ (handle, res)
+    );
+
+    // Copy constructor: allocates new handle and copies value.
+    _copy_constructor : MPFRHandle -> IO MPFRHandle;
+    _copy_constructor = |handle| (
+        // Get precision of source
+        let prec = FFI_CALL[CLong mpfr_get_prec(Ptr), handle];
+        let new_handle = *FFI_CALL_IO[Ptr malloc(CInt), c_SIZE_OF_MPFR];
+        FFI_CALL_IO[() mpfr_init2(Ptr, CLong), new_handle, prec];;
+        FFI_CALL_IO[CInt mpfr_set(Ptr, Ptr, CInt), new_handle, handle, RoundMode::rndn().to_c_rnd];;
+        pure $ new_handle
+    );
+
+    // Destructor: calls mpfr_clear and frees memory.
+    _destructor : MPFRHandle -> IO MPFRHandle;
+    _destructor = |handle| (
+        FFI_CALL_IO[() mpfr_clear(Ptr), handle];;
+        FFI_CALL_IO[() free(Ptr), handle];;
+        pure $ nullptr
+    );
+}
+
+// Arbitrary-precision floating-point number type.
+type MPFR = unbox struct { _0 : Destructor MPFRHandle };
+
+namespace MPFR {
+    // Initialize a new MPFR using specified initialization action.
+    _init_by : Precision -> (MPFRHandle -> IO a) -> (MPFR, a);
+    _init_by = |prec, ctor| do {
+        let (handle, res) = *MPFRHandle::_construct_by(prec, ctor);
+        let dtor = *Destructor::make(handle, MPFRHandle::_destructor);
+        pure $ (MPFR { _0 : dtor }, res)
+    }.unsafe_perform;
+
+    // Performs an action with a borrowed pointer to the internal data.
+    _borrow : (MPFRHandle -> a) -> MPFR -> a;
+    _borrow = |act, num| num.@_0.borrow(|handle| act(handle));
+
+    // Acts on the internal data of the MPFR, which may mutate the MPFR value.
+    _mutate : (MPFRHandle -> IO a) -> MPFR -> (MPFR, a);
+    _mutate = |act, num| (
+        let dtor = num.@_0;
+        let (dtor, res) = dtor.mutate_unique(MPFRHandle::_copy_constructor, act);
+        (MPFR { _0 : dtor }, res)
+    );
+
+    // Get the precision of an MPFR number.
+    get_prec : MPFR -> Precision;
+    get_prec = |num| (
+        num._borrow(|ptr| FFI_CALL[CLong mpfr_get_prec(Ptr), ptr].i64)
+    );
+
+    // Apply a unary operation of MPFR (taking (out, in, rnd) as arguments) to an MPFR value.
+    _unary_op : RoundMode -> ((MPFRHandle, MPFRHandle, CInt) -> IO CInt) -> MPFR -> (MPFR, CInt);
+    _unary_op = |rnd, act, num| (
+        let (is_unique, num) = num.unsafe_is_unique;
+        let rnd_c = rnd.to_c_rnd;
+        if is_unique {
+            num._mutate(|num_ptr| act((num_ptr, num_ptr, rnd_c)))
+        };
+        let prec = num.get_prec;
+        num._borrow(|num_ptr|
+            MPFR::_init_by(prec, |out_ptr| act((out_ptr, num_ptr, rnd_c)))
+        )
+    );
+
+    // Apply a binary operation of MPFR (taking (out, lhs, rhs, rnd) as arguments) to two MPFR values.
+    _binary_op : RoundMode -> Precision -> ((MPFRHandle, MPFRHandle, MPFRHandle, CInt) -> IO CInt) -> MPFR -> MPFR -> (MPFR, CInt);
+    _binary_op = |rnd, prec, act, lhs, rhs| (
+        let (is_unique, lhs) = lhs.unsafe_is_unique;
+        let rnd_c = rnd.to_c_rnd;
+        if is_unique && lhs.get_prec == prec {
+            rhs._borrow(|rhs_ptr|
+                lhs._mutate(|lhs_ptr| act((lhs_ptr, lhs_ptr, rhs_ptr, rnd_c)))
+            )
+        };
+        let (is_unique, rhs) = rhs.unsafe_is_unique;
+        if is_unique && rhs.get_prec == prec {
+            lhs._borrow(|lhs_ptr|
+                rhs._mutate(|rhs_ptr| act((rhs_ptr, lhs_ptr, rhs_ptr, rnd_c)))
+            )
+        };
+        lhs._borrow(|lhs_ptr|
+            rhs._borrow(|rhs_ptr|
+                MPFR::_init_by(prec, |out_ptr| act((out_ptr, lhs_ptr, rhs_ptr, rnd_c)))
+            )
+        )
+    );
+
+    // Create an MPFR value from an I64 with specified precision.
+    // 
+    // # Parameters
+    // - `prec`: The precision in bits.
+    // - `val`: The I64 value to convert.
+    mpfr : Precision -> I64 -> MPFR;
+    mpfr = |prec, val| (
+        let (num, _) = MPFR::_init_by(prec, |ptr| 
+            FFI_CALL_IO[CInt mpfr_set_si(Ptr, CLong, CInt), ptr, val.c_long, RoundMode::rndn().to_c_rnd]
+        );
+        num
+    );
+
+    // Create an MPFR value from a U64 with specified precision.
+    // 
+    // # Parameters
+    // - `prec`: The precision in bits.
+    // - `val`: The U64 value to convert.
+    mpfr_ui : Precision -> U64 -> MPFR;
+    mpfr_ui = |prec, val| (
+        let (num, _) = MPFR::_init_by(prec, |ptr| 
+            FFI_CALL_IO[CInt mpfr_set_ui(Ptr, CUnsignedLong, CInt), ptr, val.c_unsigned_long, RoundMode::rndn().to_c_rnd]
+        );
+        num
+    );
+
+    // Create an MPFR value from an F64 with specified precision.
+    // 
+    // # Parameters
+    // - `prec`: The precision in bits.
+    // - `val`: The F64 value to convert.
+    mpfr_f64 : Precision -> F64 -> MPFR;
+    mpfr_f64 = |prec, val| (
+        let (num, _) = MPFR::_init_by(prec, |ptr| 
+            FFI_CALL_IO[CInt mpfr_set_d(Ptr, CDouble, CInt), ptr, val, RoundMode::rndn().to_c_rnd]
+        );
+        num
+    );
+
+    // Create an MPFR value from a string with specified precision and base.
+    // 
+    // # Parameters
+    // - `prec`: The precision in bits.
+    // - `str`: The string representation of the number.
+    // - `base`: The base of the string representation (2 to 62, or 0 for auto-detection).
+    mpfr_str : Precision -> String -> I64 -> Option MPFR;
+    mpfr_str = |prec, str, base| (
+        str.borrow_c_str(|str_c_str| (
+            let (num, res) = MPFR::_init_by(prec, |ptr| 
+                FFI_CALL_IO[CInt mpfr_set_str(Ptr, Ptr, CInt, CInt), ptr, str_c_str, base.c_int, RoundMode::rndn().to_c_rnd]
+            );
+            if res == (-1).c_int { Option::none() };
+            Option::some $ num
+        ))
+    );
+
+    // Create an MPFR value representing zero.
+    // 
+    // # Parameters
+    // - `prec`: The precision in bits.
+    zero : Precision -> MPFR;
+    zero = |prec| mpfr(prec, 0);
+
+    // Create an MPFR value representing NaN (Not a Number).
+    // 
+    // # Parameters
+    // - `prec`: The precision in bits.
+    nan : Precision -> MPFR;
+    nan = |prec| (
+        let (num, _) = MPFR::_init_by(prec, |ptr| FFI_CALL_IO[() mpfr_set_nan(Ptr), ptr]);
+        num
+    );
+
+    // Create an MPFR value representing positive infinity.
+    // 
+    // # Parameters
+    // - `prec`: The precision in bits.
+    inf : Precision -> MPFR;
+    inf = |prec| (
+        let (num, _) = MPFR::_init_by(prec, |ptr| 
+            FFI_CALL_IO[() mpfr_set_inf(Ptr, CInt), ptr, 1.c_int]
+        );
+        num
+    );
+
+    // Create an MPFR value representing negative infinity.
+    // 
+    // # Parameters
+    // - `prec`: The precision in bits.
+    neg_inf : Precision -> MPFR;
+    neg_inf = |prec| (
+        let (num, _) = MPFR::_init_by(prec, |ptr| 
+            FFI_CALL_IO[() mpfr_set_inf(Ptr, CInt), ptr, (-1).c_int]
+        );
+        num
+    );
+
+    // Convert an MPFR value to I64.
+    // 
+    // Rounds toward zero. Returns none if the value doesn't fit in I64.
+    get_si : MPFR -> Option I64;
+    get_si = |num| (
+        num._borrow(|ptr| (
+            // Check if value fits in I64 range
+            let fits = FFI_CALL[CInt mpfr_fits_slong_p(Ptr, CInt), ptr, RoundMode::rndz().to_c_rnd];
+            if fits == 0.c_int { Option::none() };
+            let val = FFI_CALL[CLong mpfr_get_si(Ptr, CInt), ptr, RoundMode::rndz().to_c_rnd];
+            Option::some $ val.i64
+        ))
+    );
+
+    // Convert an MPFR value to U64.
+    // 
+    // Rounds toward zero. Returns none if the value doesn't fit in U64.
+    get_ui : MPFR -> Option U64;
+    get_ui = |num| (
+        num._borrow(|ptr| (
+            let fits = FFI_CALL[CInt mpfr_fits_ulong_p(Ptr, CInt), ptr, RoundMode::rndz().to_c_rnd];
+            if fits == 0.c_int { Option::none() };
+            let val = FFI_CALL[CUnsignedLong mpfr_get_ui(Ptr, CInt), ptr, RoundMode::rndz().to_c_rnd];
+            Option::some $ val
+        ))
+    );
+
+    // Convert an MPFR value to F64.
+    // 
+    // May lose precision if the MPFR value has more precision than F64.
+    get_f64 : MPFR -> F64;
+    get_f64 = |num| (
+        num._borrow(|ptr| 
+            FFI_CALL[CDouble mpfr_get_d(Ptr, CInt), ptr, RoundMode::rndn().to_c_rnd]
+        )
+    );
+
+    // Arithmetic operations
+
+    // Add two MPFR numbers.
+    // Uses RNDN rounding and precision is the maximum of the two operands.
+    add : MPFR -> MPFR -> MPFR;
+    add = |lhs, rhs| (
+        let prec = if lhs.get_prec >= rhs.get_prec { lhs.get_prec } else { rhs.get_prec };
+        let (num, _) = _binary_op(RoundMode::rndn(), prec, 
+            |(out_ptr, lhs_ptr, rhs_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_add(Ptr, Ptr, Ptr, CInt), out_ptr, lhs_ptr, rhs_ptr, rnd],
+            lhs, rhs
+        );
+        num
+    );
+
+    // Subtract two MPFR numbers.
+    // Uses RNDN rounding and precision is the maximum of the two operands.
+    sub : MPFR -> MPFR -> MPFR;
+    sub = |lhs, rhs| (
+        let prec = if lhs.get_prec >= rhs.get_prec { lhs.get_prec } else { rhs.get_prec };
+        let (num, _) = _binary_op(RoundMode::rndn(), prec, 
+            |(out_ptr, lhs_ptr, rhs_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_sub(Ptr, Ptr, Ptr, CInt), out_ptr, lhs_ptr, rhs_ptr, rnd],
+            lhs, rhs
+        );
+        num
+    );
+
+    // Multiply two MPFR numbers.
+    // Uses RNDN rounding and precision is the maximum of the two operands.
+    mul : MPFR -> MPFR -> MPFR;
+    mul = |lhs, rhs| (
+        let prec = if lhs.get_prec >= rhs.get_prec { lhs.get_prec } else { rhs.get_prec };
+        let (num, _) = _binary_op(RoundMode::rndn(), prec, 
+            |(out_ptr, lhs_ptr, rhs_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_mul(Ptr, Ptr, Ptr, CInt), out_ptr, lhs_ptr, rhs_ptr, rnd],
+            lhs, rhs
+        );
+        num
+    );
+
+    // Divide two MPFR numbers.
+    // Uses RNDN rounding and precision is the maximum of the two operands.
+    div : MPFR -> MPFR -> MPFR;
+    div = |lhs, rhs| (
+        let prec = if lhs.get_prec >= rhs.get_prec { lhs.get_prec } else { rhs.get_prec };
+        let (num, _) = _binary_op(RoundMode::rndn(), prec, 
+            |(out_ptr, lhs_ptr, rhs_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_div(Ptr, Ptr, Ptr, CInt), out_ptr, lhs_ptr, rhs_ptr, rnd],
+            lhs, rhs
+        );
+        num
+    );
+
+    // Negate an MPFR number (exact operation).
+    neg : MPFR -> MPFR;
+    neg = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_neg(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Absolute value of an MPFR number (exact operation).
+    abs : MPFR -> MPFR;
+    abs = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_abs(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Comparison functions
+
+    // Compare two MPFR numbers.
+    // Returns negative if lhs < rhs, zero if lhs == rhs, positive if lhs > rhs.
+    cmp : MPFR -> MPFR -> I64;
+    cmp = |lhs, rhs| (
+        lhs._borrow(|lhs_ptr|
+            rhs._borrow(|rhs_ptr|
+                FFI_CALL[CInt mpfr_cmp(Ptr, Ptr), lhs_ptr, rhs_ptr].i64
+            )
+        )
+    );
+
+    // Check if two MPFR numbers are equal.
+    equal : MPFR -> MPFR -> Bool;
+    equal = |lhs, rhs| (
+        lhs._borrow(|lhs_ptr|
+            rhs._borrow(|rhs_ptr|
+                FFI_CALL[CInt mpfr_equal_p(Ptr, Ptr), lhs_ptr, rhs_ptr] != 0.c_int
+            )
+        )
+    );
+
+    // Check if lhs < rhs.
+    less : MPFR -> MPFR -> Bool;
+    less = |lhs, rhs| (
+        lhs._borrow(|lhs_ptr|
+            rhs._borrow(|rhs_ptr|
+                FFI_CALL[CInt mpfr_less_p(Ptr, Ptr), lhs_ptr, rhs_ptr] != 0.c_int
+            )
+        )
+    );
+
+    // Check if lhs <= rhs.
+    lesseq : MPFR -> MPFR -> Bool;
+    lesseq = |lhs, rhs| (
+        lhs._borrow(|lhs_ptr|
+            rhs._borrow(|rhs_ptr|
+                FFI_CALL[CInt mpfr_lessequal_p(Ptr, Ptr), lhs_ptr, rhs_ptr] != 0.c_int
+            )
+        )
+    );
+
+    // Special value predicates
+
+    // Check if the value is NaN.
+    is_nan : MPFR -> Bool;
+    is_nan = |num| (
+        num._borrow(|ptr| FFI_CALL[CInt mpfr_nan_p(Ptr), ptr] != 0.c_int)
+    );
+
+    // Check if the value is infinite.
+    is_inf : MPFR -> Bool;
+    is_inf = |num| (
+        num._borrow(|ptr| FFI_CALL[CInt mpfr_inf_p(Ptr), ptr] != 0.c_int)
+    );
+
+    // Check if the value is a regular number (not NaN, not Inf).
+    is_number : MPFR -> Bool;
+    is_number = |num| (
+        num._borrow(|ptr| FFI_CALL[CInt mpfr_number_p(Ptr), ptr] != 0.c_int)
+    );
+
+    // Check if the value is zero.
+    is_zero : MPFR -> Bool;
+    is_zero = |num| (
+        num._borrow(|ptr| FFI_CALL[CInt mpfr_zero_p(Ptr), ptr] != 0.c_int)
+    );
+
+    // Get the sign of a number.
+    // Returns negative if num < 0, zero if num == 0, positive if num > 0.
+    sgn : MPFR -> I64;
+    sgn = |num| (
+        num._borrow(|ptr| FFI_CALL[CInt mpfr_sgn(Ptr), ptr].i64)
+    );
+}
+
+// Trait implementations
+
+impl MPFR : Zero {
+    zero = MPFR::zero(53);
+}
+
+impl MPFR : Add {
+    add = MPFR::add;
+}
+
+impl MPFR : Sub {
+    sub = MPFR::sub;
+}
+
+impl MPFR : Mul {
+    mul = MPFR::mul;
+}
+
+impl MPFR : Div {
+    div = MPFR::div;
+}
+
+impl MPFR : Neg {
+    neg = MPFR::neg;
+}
+
+impl MPFR : Eq {
+    eq = MPFR::equal;
+}
+
+impl MPFR : LessThan {
+    less_than = MPFR::less;
+}
+
+impl MPFR : LessThanOrEq {
+    less_than_or_eq = MPFR::lesseq;
+}
+
+impl MPFR : ToString {
+    to_string = |num| (
+        // For now, convert to F64 and use its to_string
+        // TODO: Implement proper mpfr_get_str with exponent handling
+        num.get_f64.to_string
+    );
+}

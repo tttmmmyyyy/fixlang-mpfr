@@ -1,0 +1,17 @@
+[general]
+name = "mpfr-fix"
+version = "0.1.0"
+
+[build]
+files = ["mpfr.fix"]
+dynamic_links = ["mpfr", "gmp"]
+
+[build.test]
+files = ["mpfr-test.fix"]
+memcheck = true
+
+
+[[dependencies]]
+name = "gmp-fix"
+version = "0.6.4"
+git = { url = "https://github.com/tttmmmyyyy/fixlang-gmp.git" }

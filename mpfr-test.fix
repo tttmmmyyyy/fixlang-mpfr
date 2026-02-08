@@ -1,0 +1,197 @@
+// Tests for MPFR module
+module Test;
+
+import MPFR;
+
+test_basic_construction : IO ();
+test_basic_construction = (
+    // Test mpfr from I64
+    let x = MPFR::mpfr(53, 42);
+    assert_eq(|_|"mpfr from I64", x.get_si.as_some, 42);;
+
+    // Test mpfr from U64
+    let y = MPFR::mpfr_ui(53, 100_U64);
+    assert_eq(|_|"mpfr from U64", y.get_ui.as_some, 100_U64);;
+
+    // Test mpfr from F64
+    let z = MPFR::mpfr_f64(113, 3.14159);
+    let z_f64 = z.get_f64;
+    assert(|_|"mpfr from F64", (z_f64 - 3.14159).abs < 0.00001);;
+
+    // Test special values
+    let zero_val = MPFR::zero(53);
+    assert(|_|"zero is_zero", zero_val.is_zero);;
+    
+    let nan_val = MPFR::nan(53);
+    assert(|_|"nan is_nan", nan_val.is_nan);;
+    
+    let inf_val = MPFR::inf(53);
+    assert(|_|"inf is_inf", inf_val.is_inf);;
+    
+    let neg_inf_val = MPFR::neg_inf(53);
+    assert(|_|"neg_inf is_inf", neg_inf_val.is_inf);;
+    assert_eq(|_|"neg_inf sgn", neg_inf_val.sgn, -1);;
+
+    pure()
+);
+
+test_arithmetic : IO ();
+test_arithmetic = (
+    let x = MPFR::mpfr(113, 10);
+    let y = MPFR::mpfr(113, 3);
+
+    // Test addition
+    let sum = x + y;
+    assert_eq(|_|"10 + 3", sum.get_si.as_some, 13);;
+
+    // Test subtraction
+    let diff = x - y;
+    assert_eq(|_|"10 - 3", diff.get_si.as_some, 7);;
+
+    // Test multiplication
+    let prod = x * y;
+    assert_eq(|_|"10 * 3", prod.get_si.as_some, 30);;
+
+    // Test division
+    let quot = x / y;
+    let quot_f64 = quot.get_f64;
+    assert(|_|"10 / 3", (quot_f64 - 3.333333).abs < 0.00001);;
+
+    // Test negation
+    let neg_x = -x;
+    assert_eq(|_|"negation", neg_x.get_si.as_some, -10);;
+
+    // Test absolute value
+    let abs_neg = MPFR::abs(neg_x);
+    assert_eq(|_|"abs(-10)", abs_neg.get_si.as_some, 10);;
+
+    pure()
+);
+
+test_comparison : IO ();
+test_comparison = (
+    let x = MPFR::mpfr(53, 10);
+    let y = MPFR::mpfr(53, 20);
+    let z = MPFR::mpfr(53, 10);
+
+    // Test equality
+    assert(|_|"x == z", x == z);;
+    assert(|_|"x != y", !(x == y));;
+
+    // Test less than
+    assert(|_|"x < y", x < y);;
+    assert(|_|"!(y < x)", !(y < x));;
+
+    // Test less than or equal
+    assert(|_|"x <= z", x <= z);;
+    assert(|_|"x <= y", x <= y);;
+
+    // Test cmp - use MPFR::cmp(lhs, rhs) not x.cmp(y)
+    assert_eq(|_|"cmp x z", MPFR::cmp(x, z), 0);;
+    assert(|_|"cmp x y < 0", MPFR::cmp(x, y) < 0);;
+    assert(|_|"cmp y x > 0", MPFR::cmp(y, x) > 0);;
+
+    pure()
+);
+
+test_conversion : IO ();
+test_conversion = (
+    // Test I64 conversion
+    let x = MPFR::mpfr(53, 12345);
+    assert_eq(|_|"MPFR to I64", x.get_si.as_some, 12345);;
+
+    // Test U64 conversion
+    let y = MPFR::mpfr_ui(53, 67890_U64);
+    assert_eq(|_|"MPFR to U64", y.get_ui.as_some, 67890_U64);;
+
+    // Test F64 conversion
+    let z = MPFR::mpfr_f64(113, 2.718281828);
+    let z_f64 = z.get_f64;
+    assert(|_|"MPFR to F64", (z_f64 - 2.718281828).abs < 0.00000001);;
+
+    pure()
+);
+
+test_special_values : IO ();
+test_special_values = (
+    let normal = MPFR::mpfr(53, 42);
+    let nan_val = MPFR::nan(53);
+    let inf_val = MPFR::inf(53);
+    let zero_val = MPFR::zero(53);
+
+    // Test predicates on normal value
+    assert(|_|"normal.is_number", normal.is_number);;
+    assert(|_|"!normal.is_nan", !normal.is_nan);;
+    assert(|_|"!normal.is_inf", !normal.is_inf);;
+    assert(|_|"!normal.is_zero", !normal.is_zero);;
+
+    // Test predicates on special values
+    assert(|_|"nan.is_nan", nan_val.is_nan);;
+    assert(|_|"inf.is_inf", inf_val.is_inf);;
+    assert(|_|"zero.is_zero", zero_val.is_zero);;
+
+    // Test sign
+    let pos = MPFR::mpfr(53, 10);
+    let neg = MPFR::mpfr(53, -10);
+    assert(|_|"sgn(10) > 0", pos.sgn > 0);;
+    assert(|_|"sgn(-10) < 0", neg.sgn < 0);;
+    assert_eq(|_|"sgn(0)", zero_val.sgn, 0);;
+
+    pure()
+);
+
+test_precision : IO ();
+test_precision = (
+    let x53 = MPFR::mpfr(53, 1);
+    let x113 = MPFR::mpfr(113, 1);
+    let x256 = MPFR::mpfr(256, 1);
+
+    assert_eq(|_|"precision 53", x53.get_prec, 53);;
+    assert_eq(|_|"precision 113", x113.get_prec, 113);;
+    assert_eq(|_|"precision 256", x256.get_prec, 256);;
+
+    // Test that operations preserve maximum precision
+    let sum = x53 + x113;
+    assert_eq(|_|"precision after add", sum.get_prec, 113);;
+
+    pure()
+);
+
+test_string_conversion : IO ();
+test_string_conversion = (
+    // Test mpfr_str
+    let from_str = MPFR::mpfr_str(113, "123.456", 10);
+    assert(|_|"from_str success", from_str.is_some);;
+    let val = from_str.as_some;
+    let val_f64 = val.get_f64;
+    assert(|_|"from_str value", (val_f64 - 123.456).abs < 0.001);;
+
+    // Test hex string
+    let from_hex = MPFR::mpfr_str(113, "1A.5", 16);
+    assert(|_|"from_hex success", from_hex.is_some);;
+    let hex_val = from_hex.as_some;
+    let hex_f64 = hex_val.get_f64;
+    assert(|_|"from_hex value", (hex_f64 - 26.3125).abs < 0.001);;
+
+    // Test invalid string
+    let invalid = MPFR::mpfr_str(113, "invalid", 10);
+    assert(|_|"invalid string fails", invalid.is_none);;
+
+    pure()
+);
+
+test : IO ();
+test = (
+    test_basic_construction;;
+    test_arithmetic;;
+    test_comparison;;
+    test_conversion;;
+    test_special_values;;
+    test_precision;;
+    test_string_conversion;;
+
+    pure()
+);
+
+main : IO ();
+main = test;
