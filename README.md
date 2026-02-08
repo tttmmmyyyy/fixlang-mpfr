@@ -43,19 +43,6 @@ let z = x + y;  // Uses RNDN rounding, precision is max(x.prec, y.prec)
 - **Functional style**: Immutable data structures with automatic memory management
 - **Trait implementations**: Zero, Add, Sub, Mul, Div, Neg, Eq, LessThan, ToString
 
-## Installation
-
-1. Install MPFR and GMP:
-   ```bash
-   # On Debian/Ubuntu:
-   sudo apt-get install libmpfr-dev libgmp-dev
-   
-   # On macOS:
-   brew install mpfr gmp
-   ```
-
-2. Clone this repository and use it as a Fix dependency.
-
 ## Usage Example
 
 ```fix
@@ -84,30 +71,6 @@ main = (
     println(pi.to_string)
 );
 ```
-
-## Testing
-
-Run tests with:
-
-```bash
-fix test
-```
-
-Tests use valgrind for memory leak detection.
-
-## Documentation
-
-Generate documentation with:
-
-```bash
-fix docs
-```
-
-Documentation will be generated in the `docs/` directory.
-
-## License
-
-MIT License - see LICENSE file for details.
 
 ## References
 
