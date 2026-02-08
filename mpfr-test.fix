@@ -180,6 +180,373 @@ test_string_conversion = (
     pure()
 );
 
+test_power_root : IO ();
+test_power_root = (
+    // Test sqr
+    let x = MPFR::mpfr(113, 5);
+    let x2 = x.sqr;
+    assert_eq(|_|"sqr(5)", x2.get_si.as_some, 25);;
+
+    // Test sqrt
+    let y = MPFR::mpfr(113, 25);
+    let y_sqrt = y.sqrt;
+    assert_eq(|_|"sqrt(25)", y_sqrt.get_si.as_some, 5);;
+
+    // Test cbrt
+    let z = MPFR::mpfr(113, 27);
+    let z_cbrt = z.cbrt;
+    assert_eq(|_|"cbrt(27)", z_cbrt.get_si.as_some, 3);;
+
+    // Test rootn_ui
+    let w = MPFR::mpfr(113, 16);
+    let w_root4 = MPFR::rootn_ui(4_U64, w);
+    assert_eq(|_|"rootn_ui(4, 16)", w_root4.get_si.as_some, 2);;
+
+    // Test pow
+    let base = MPFR::mpfr(113, 2);
+    let exp = MPFR::mpfr(113, 10);
+    let result = MPFR::pow(base, exp);
+    assert_eq(|_|"pow(2, 10)", result.get_si.as_some, 1024);;
+
+    // Test pow_ui
+    let base2 = MPFR::mpfr(113, 3);
+    let result2 = MPFR::pow_ui(4_U64, base2);
+    assert_eq(|_|"pow_ui(4, 3)", result2.get_si.as_some, 81);;
+
+    // Test mul_2ui (multiply by 2^n)
+    let a = MPFR::mpfr(113, 5);
+    let a_shifted = MPFR::mul_2ui(3_U64, a);
+    assert_eq(|_|"mul_2ui(3, 5)", a_shifted.get_si.as_some, 40);;
+
+    pure()
+);
+
+test_exponential_logarithm : IO ();
+test_exponential_logarithm = (
+    // Test exp and log
+    let x = MPFR::mpfr_f64(113, 2.0);
+    let exp_x = x.exp;
+    let log_exp_x = exp_x.log;
+    let diff = MPFR::abs(MPFR::sub(log_exp_x, x));
+    assert(|_|"log(exp(x)) == x", diff.get_f64 < 0.000001);;
+
+    // Test log2
+    let eight = MPFR::mpfr(113, 8);
+    let log2_8 = eight.log2;
+    assert_eq(|_|"log2(8)", log2_8.get_si.as_some, 3);;
+
+    // Test log10
+    let thousand = MPFR::mpfr(113, 1000);
+    let log10_1000 = thousand.log10;
+    assert_eq(|_|"log10(1000)", log10_1000.get_si.as_some, 3);;
+
+    pure()
+);
+
+test_trigonometric : IO ();
+test_trigonometric = (
+    let pi = MPFR::const_pi(113);
+    
+    // Test sin(pi/2) == 1
+    let pi_2 = MPFR::div(pi, MPFR::mpfr(113, 2));
+    let sin_pi_2 = pi_2.sin;
+    let diff1 = MPFR::abs(MPFR::sub(sin_pi_2, MPFR::mpfr(113, 1)));
+    assert(|_|"sin(pi/2) == 1", diff1.get_f64 < 0.000001);;
+
+    // Test cos(0) == 1
+    let zero = MPFR::mpfr(113, 0);
+    let cos_0 = zero.cos;
+    assert_eq(|_|"cos(0)", cos_0.get_si.as_some, 1);;
+
+    // Test asin(1) ~= pi/2
+    let one = MPFR::mpfr(113, 1);
+    let asin_1 = one.asin;
+    let diff2 = MPFR::abs(MPFR::sub(asin_1, pi_2));
+    assert(|_|"asin(1) == pi/2", diff2.get_f64 < 0.000001);;
+
+    // Test atan2
+    let y = MPFR::mpfr(113, 1);
+    let x = MPFR::mpfr(113, 1);
+    let atan2_result = MPFR::atan2(y, x);
+    let pi_4 = MPFR::div(pi, MPFR::mpfr(113, 4));
+    let diff3 = MPFR::abs(MPFR::sub(atan2_result, pi_4));
+    assert(|_|"atan2(1,1) == pi/4", diff3.get_f64 < 0.000001);;
+
+    pure()
+);
+
+test_constants : IO ();
+test_constants = (
+    // Test const_pi
+    let pi = MPFR::const_pi(113);
+    let pi_f64 = pi.get_f64;
+    assert(|_|"pi ~= 3.14159", (pi_f64 - 3.14159265358979).abs < 0.00001);;
+
+    // Test const_log2
+    let log2 = MPFR::const_log2(113);
+    let log2_f64 = log2.get_f64;
+    assert(|_|"log2 ~= 0.693", (log2_f64 - 0.69314718055995).abs < 0.00001);;
+
+    // Test const_euler
+    let euler = MPFR::const_euler(113);
+    let euler_f64 = euler.get_f64;
+    assert(|_|"euler ~= 0.577", (euler_f64 - 0.57721566490153).abs < 0.00001);;
+
+    pure()
+);
+
+test_hyperbolic : IO ();
+test_hyperbolic = (
+    let zero = MPFR::mpfr(113, 0);
+    
+    // Test sinh(0) == 0
+    let sinh_0 = zero.sinh;
+    assert(|_|"sinh(0) == 0", sinh_0.is_zero);;
+
+    // Test cosh(0) == 1
+    let cosh_0 = zero.cosh;
+    assert_eq(|_|"cosh(0)", cosh_0.get_si.as_some, 1);;
+
+    // Test tanh identity: tanh(x) == sinh(x)/cosh(x)
+    let x = MPFR::mpfr_f64(113, 0.5);
+    let tanh_x = x.tanh;
+    let sinh_x = x.sinh;
+    let cosh_x = x.cosh;
+    let manual_tanh = MPFR::div(sinh_x, cosh_x);
+    let diff = MPFR::abs(MPFR::sub(tanh_x, manual_tanh));
+    assert(|_|"tanh(x) == sinh(x)/cosh(x)", diff.get_f64 < 0.000001);;
+
+    // Test asinh(sinh(x)) ~= x
+    let y = MPFR::mpfr_f64(113, 1.0);
+    let sinh_y = y.sinh;
+    let asinh_sinh_y = sinh_y.asinh;
+    let diff2 = MPFR::abs(MPFR::sub(asinh_sinh_y, y));
+    assert(|_|"asinh(sinh(x)) == x", diff2.get_f64 < 0.000001);;
+
+    pure()
+);
+
+test_special_functions : IO ();
+test_special_functions = (
+    // Test gamma(1) == 1
+    let one = MPFR::mpfr(113, 1);
+    let gamma_1 = one.gamma;
+    assert_eq(|_|"gamma(1)", gamma_1.get_si.as_some, 1);;
+
+    // Test gamma(5) == 24 (4!)
+    let five = MPFR::mpfr(113, 5);
+    let gamma_5 = five.gamma;
+    assert_eq(|_|"gamma(5) == 24", gamma_5.get_si.as_some, 24);;
+
+    // Test lngamma(1) == 0
+    let lngamma_1 = one.lngamma;
+    assert(|_|"lngamma(1) == 0", lngamma_1.is_zero);;
+
+    // Test erf(0) == 0
+    let zero = MPFR::mpfr(113, 0);
+    let erf_0 = zero.erf;
+    assert(|_|"erf(0) == 0", erf_0.is_zero);;
+
+    // Test erfc(0) == 1
+    let erfc_0 = zero.erfc;
+    assert_eq(|_|"erfc(0) == 1", erfc_0.get_si.as_some, 1);;
+
+    // Test erf(x) + erfc(x) == 1
+    let x = MPFR::mpfr_f64(113, 0.5);
+    let erf_x = x.erf;
+    let erfc_x = x.erfc;
+    let sum = MPFR::add(erf_x, erfc_x);
+    let diff = MPFR::abs(MPFR::sub(sum, MPFR::mpfr(113, 1)));
+    assert(|_|"erf(x) + erfc(x) == 1", diff.get_f64 < 0.000001);;
+
+    pure()
+);
+
+test_bit_shift_division : IO ();
+test_bit_shift_division = (
+    let x = MPFR::mpfr(113, 64);
+    
+    // Test div_2ui: 64 / 2^3 = 8
+    let result = MPFR::div_2ui(3_U64, x);
+    assert_eq(|_|"64 / 2^3", result.get_si.as_some, 8);;
+    
+    // Test div_2si: 64 / 2^2 = 16
+    let result2 = MPFR::div_2si(2, x);
+    assert_eq(|_|"64 / 2^2", result2.get_si.as_some, 16);;
+    
+    // Test div_2si with negative (multiply): 64 / 2^(-1) = 128
+    let result3 = MPFR::div_2si(-1, x);
+    assert_eq(|_|"64 / 2^(-1)", result3.get_si.as_some, 128);;
+    
+    pure()
+);
+
+test_exponential_extended : IO ();
+test_exponential_extended = (
+    // Test exp2: 2^3 = 8
+    let x = MPFR::mpfr(113, 3);
+    let result = x.exp2;
+    assert_eq(|_|"2^3", result.get_si.as_some, 8);;
+    
+    // Test exp10: 10^2 = 100
+    let y = MPFR::mpfr(113, 2);
+    let result2 = y.exp10;
+    assert_eq(|_|"10^2", result2.get_si.as_some, 100);;
+    
+    // Test expm1: expm1(0) = 0
+    let zero = MPFR::mpfr(113, 0);
+    let result3 = zero.expm1;
+    assert(|_|"expm1(0)", result3.is_zero);;
+    
+    // Test log1p: log1p(0) = 0
+    let result4 = zero.log1p;
+    assert(|_|"log1p(0)", result4.is_zero);;
+    
+    pure()
+);
+
+test_integer_functions : IO ();
+test_integer_functions = (
+    let x = MPFR::mpfr_f64(113, 3.7);
+    
+    // Test ceil: ceil(3.7) = 4
+    let c = x.ceil;
+    assert_eq(|_|"ceil(3.7)", c.get_si.as_some, 4);;
+    
+    // Test floor: floor(3.7) = 3
+    let f = x.floor;
+    assert_eq(|_|"floor(3.7)", f.get_si.as_some, 3);;
+    
+    // Test round: round(3.7) = 4
+    let r = x.round;
+    assert_eq(|_|"round(3.7)", r.get_si.as_some, 4);;
+    
+    // Test trunc: trunc(3.7) = 3
+    let t = x.trunc;
+    assert_eq(|_|"trunc(3.7)", t.get_si.as_some, 3);;
+    
+    // Test with negative number
+    let y = MPFR::mpfr_f64(113, -2.3);
+    let c2 = y.ceil;
+    assert_eq(|_|"ceil(-2.3)", c2.get_si.as_some, -2);;
+    
+    let f2 = y.floor;
+    assert_eq(|_|"floor(-2.3)", f2.get_si.as_some, -3);;
+    
+    pure()
+);
+
+test_minmax : IO ();
+test_minmax = (
+    let x = MPFR::mpfr(113, 5);
+    let y = MPFR::mpfr(113, 3);
+    
+    // Test min
+    let min_val = MPFR::min(x, y);
+    assert_eq(|_|"min(5, 3)", min_val.get_si.as_some, 3);;
+    
+    // Test max
+    let max_val = MPFR::max(x, y);
+    assert_eq(|_|"max(5, 3)", max_val.get_si.as_some, 5);;
+    
+    pure()
+);
+
+test_advanced_math : IO ();
+test_advanced_math = (
+    // Test fma: 2*3 + 4 = 10
+    let x = MPFR::mpfr(113, 2);
+    let y = MPFR::mpfr(113, 3);
+    let z = MPFR::mpfr(113, 4);
+    let result = MPFR::fma(x, y, z);
+    assert_eq(|_|"2*3 + 4", result.get_si.as_some, 10);;
+    
+    // Test hypot: hypot(3, 4) = 5
+    let a = MPFR::mpfr(113, 3);
+    let b = MPFR::mpfr(113, 4);
+    let h = MPFR::hypot(a, b);
+    assert_eq(|_|"hypot(3, 4)", h.get_si.as_some, 5);;
+    
+    // Test fac_ui: 5! = 120
+    let fac5 = MPFR::fac_ui(5_U64, 113);
+    assert_eq(|_|"5!", fac5.get_si.as_some, 120);;
+    
+    // Test fmod: fmod(7, 3) = 1
+    let p = MPFR::mpfr(113, 7);
+    let q = MPFR::mpfr(113, 3);
+    let fm = MPFR::fmod(p, q);
+    assert_eq(|_|"fmod(7, 3)", fm.get_si.as_some, 1);;
+    
+    pure()
+);
+
+test_additional_trig : IO ();
+test_additional_trig = (
+    let zero = MPFR::mpfr(113, 0);
+    
+    // Test sec(0) = 1
+    let sec_0 = zero.sec;
+    assert_eq(|_|"sec(0)", sec_0.get_si.as_some, 1);;
+    
+    // Test sech(0) = 1
+    let sech_0 = zero.sech;
+    assert_eq(|_|"sech(0)", sech_0.get_si.as_some, 1);;
+    
+    pure()
+);
+
+test_zeta_beta : IO ();
+test_zeta_beta = (
+    // Test zeta_ui(2) ~= pi^2/6 ~= 1.6449
+    let zeta_2 = MPFR::zeta_ui(2_U64, 113);
+    let val = zeta_2.get_f64;
+    assert(|_|"zeta(2) ~= 1.6449", (val - 1.6449).abs < 0.001);;
+    
+    // Test digamma(1) ~= -0.5772 (negative Euler constant)
+    let one = MPFR::mpfr(113, 1);
+    let dig1 = one.digamma;
+    let val2 = dig1.get_f64;
+    assert(|_|"digamma(1) ~= -0.5772", (val2 + 0.5772).abs < 0.001);;
+    
+    pure()
+);
+
+test_bessel : IO ();
+test_bessel = (
+    // Test j0(0) = 1
+    let zero = MPFR::mpfr(113, 0);
+    let j0_0 = zero.j0;
+    assert_eq(|_|"j0(0)", j0_0.get_si.as_some, 1);;
+    
+    // Test j1(0) = 0
+    let j1_0 = zero.j1;
+    assert(|_|"j1(0)", j1_0.is_zero);;
+    
+    pure()
+);
+
+test_utilities : IO ();
+test_utilities = (
+    // Test signbit
+    let pos = MPFR::mpfr(113, 5);
+    let neg = MPFR::mpfr(113, -5);
+    assert_eq(|_|"signbit(5)", pos.signbit, false);;
+    assert_eq(|_|"signbit(-5)", neg.signbit, true);;
+    
+    // Test copysign: copysign(5, -3) = -5
+    let x = MPFR::mpfr(113, 5);
+    let y = MPFR::mpfr(113, -3);
+    let result = MPFR::copysign(x, y);
+    assert_eq(|_|"copysign(5, -3)", result.get_si.as_some, -5);;
+    
+    // Test const_catalan
+    let catalan = MPFR::const_catalan(113);
+    let val = catalan.get_f64;
+    assert(|_|"Catalan constant ~= 0.9159", (val - 0.9159).abs < 0.001);;
+    
+    pure()
+);
+
 test : IO ();
 test = (
     test_basic_construction;;
@@ -189,6 +556,21 @@ test = (
     test_special_values;;
     test_precision;;
     test_string_conversion;;
+    test_power_root;;
+    test_exponential_logarithm;;
+    test_trigonometric;;
+    test_constants;;
+    test_hyperbolic;;
+    test_special_functions;;
+    test_bit_shift_division;;
+    test_exponential_extended;;
+    test_integer_functions;;
+    test_minmax;;
+    test_advanced_math;;
+    test_additional_trig;;
+    test_zeta_beta;;
+    test_bessel;;
+    test_utilities;;
 
     pure()
 );

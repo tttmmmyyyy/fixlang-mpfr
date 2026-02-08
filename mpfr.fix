@@ -28,11 +28,11 @@ namespace RoundMode {
     to_c_rnd : RoundMode -> CInt;
     to_c_rnd = |rnd| (
         match rnd {
-            rndn(_) => 0.c_int,
-            rndz(_) => 1.c_int,
-            rndu(_) => 2.c_int,
-            rndd(_) => 3.c_int,
-            rnda(_) => 4.c_int,
+            rndn() => 0.c_int,
+            rndz() => 1.c_int,
+            rndu() => 2.c_int,
+            rndd() => 3.c_int,
+            rnda() => 4.c_int,
         }
     );
 }
@@ -92,6 +92,9 @@ namespace MPFR {
     );
 
     // Get the precision of an MPFR number.
+    // 
+    // # Parameters
+    // - `x`: The number to get precision of.
     get_prec : MPFR -> Precision;
     get_prec = |num| (
         num._borrow(|ptr| FFI_CALL[CLong mpfr_get_prec(Ptr), ptr].i64)
@@ -234,6 +237,9 @@ namespace MPFR {
     // Convert an MPFR value to I64.
     // 
     // Rounds toward zero. Returns none if the value doesn't fit in I64.
+    // 
+    // # Parameters
+    // - `x`: The MPFR number to convert.
     get_si : MPFR -> Option I64;
     get_si = |num| (
         num._borrow(|ptr| (
@@ -248,6 +254,9 @@ namespace MPFR {
     // Convert an MPFR value to U64.
     // 
     // Rounds toward zero. Returns none if the value doesn't fit in U64.
+    // 
+    // # Parameters
+    // - `x`: The MPFR number to convert.
     get_ui : MPFR -> Option U64;
     get_ui = |num| (
         num._borrow(|ptr| (
@@ -261,6 +270,9 @@ namespace MPFR {
     // Convert an MPFR value to F64.
     // 
     // May lose precision if the MPFR value has more precision than F64.
+    // 
+    // # Parameters
+    // - `x`: The MPFR number to convert.
     get_f64 : MPFR -> F64;
     get_f64 = |num| (
         num._borrow(|ptr| 
@@ -272,6 +284,10 @@ namespace MPFR {
 
     // Add two MPFR numbers.
     // Uses RNDN rounding and precision is the maximum of the two operands.
+    // 
+    // # Parameters
+    // - `lhs`: The left-hand side operand.
+    // - `rhs`: The right-hand side operand.
     add : MPFR -> MPFR -> MPFR;
     add = |lhs, rhs| (
         let prec = if lhs.get_prec >= rhs.get_prec { lhs.get_prec } else { rhs.get_prec };
@@ -285,6 +301,10 @@ namespace MPFR {
 
     // Subtract two MPFR numbers.
     // Uses RNDN rounding and precision is the maximum of the two operands.
+    // 
+    // # Parameters
+    // - `lhs`: The left-hand side operand.
+    // - `rhs`: The right-hand side operand.
     sub : MPFR -> MPFR -> MPFR;
     sub = |lhs, rhs| (
         let prec = if lhs.get_prec >= rhs.get_prec { lhs.get_prec } else { rhs.get_prec };
@@ -298,6 +318,10 @@ namespace MPFR {
 
     // Multiply two MPFR numbers.
     // Uses RNDN rounding and precision is the maximum of the two operands.
+    // 
+    // # Parameters
+    // - `lhs`: The left-hand side operand.
+    // - `rhs`: The right-hand side operand.
     mul : MPFR -> MPFR -> MPFR;
     mul = |lhs, rhs| (
         let prec = if lhs.get_prec >= rhs.get_prec { lhs.get_prec } else { rhs.get_prec };
@@ -311,6 +335,10 @@ namespace MPFR {
 
     // Divide two MPFR numbers.
     // Uses RNDN rounding and precision is the maximum of the two operands.
+    // 
+    // # Parameters
+    // - `lhs`: The left-hand side operand (dividend).
+    // - `rhs`: The right-hand side operand (divisor).
     div : MPFR -> MPFR -> MPFR;
     div = |lhs, rhs| (
         let prec = if lhs.get_prec >= rhs.get_prec { lhs.get_prec } else { rhs.get_prec };
@@ -323,6 +351,9 @@ namespace MPFR {
     );
 
     // Negate an MPFR number (exact operation).
+    // 
+    // # Parameters
+    // - `x`: The number to negate.
     neg : MPFR -> MPFR;
     neg = |num| (
         let (result, _) = _unary_op(RoundMode::rndn(), 
@@ -334,6 +365,9 @@ namespace MPFR {
     );
 
     // Absolute value of an MPFR number (exact operation).
+    // 
+    // # Parameters
+    // - `x`: The number to take absolute value of.
     abs : MPFR -> MPFR;
     abs = |num| (
         let (result, _) = _unary_op(RoundMode::rndn(), 
@@ -344,10 +378,1123 @@ namespace MPFR {
         result
     );
 
+    // Square an MPFR number.
+    // 
+    // # Parameters
+    // - `x`: The number to square.
+    sqr : MPFR -> MPFR;
+    sqr = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_sqr(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Square root of an MPFR number.
+    // 
+    // # Parameters
+    // - `x`: The number to take square root of.
+    sqrt : MPFR -> MPFR;
+    sqrt = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_sqrt(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Reciprocal square root of an MPFR number.
+    // 
+    // # Parameters
+    // - `x`: The number to take reciprocal square root of (1/sqrt(x)).
+    rec_sqrt : MPFR -> MPFR;
+    rec_sqrt = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_rec_sqrt(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Cube root of an MPFR number.
+    // 
+    // # Parameters
+    // - `x`: The number to take cube root of.
+    cbrt : MPFR -> MPFR;
+    cbrt = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_cbrt(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // N-th root of an MPFR number.
+    // 
+    // # Parameters
+    // - `n`: The degree of the root (must be > 0).
+    // - `x`: The number to take n-th root of.
+    rootn_ui : U64 -> MPFR -> MPFR;
+    rootn_ui = |n, num| (
+        let (result, _) = num._borrow(|num_ptr|
+            MPFR::_init_by(num.get_prec, |out_ptr| 
+                FFI_CALL_IO[CInt mpfr_rootn_ui(Ptr, Ptr, CUnsignedLong, CInt), 
+                    out_ptr, num_ptr, n.c_unsigned_long, RoundMode::rndn().to_c_rnd]
+            )
+        );
+        result
+    );
+
+    // Power function: base^exponent.
+    // 
+    // # Parameters
+    // - `base`: The base.
+    // - `exponent`: The exponent.
+    pow : MPFR -> MPFR -> MPFR;
+    pow = |base, exp| (
+        let prec = if base.get_prec >= exp.get_prec { base.get_prec } else { exp.get_prec };
+        let (num, _) = _binary_op(RoundMode::rndn(), prec, 
+            |(out_ptr, base_ptr, exp_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_pow(Ptr, Ptr, Ptr, CInt), out_ptr, base_ptr, exp_ptr, rnd],
+            base, exp
+        );
+        num
+    );
+
+    // Power function with unsigned integer exponent.
+    // 
+    // # Parameters
+    // - `exponent`: The unsigned integer exponent.
+    // - `base`: The base.
+    pow_ui : U64 -> MPFR -> MPFR;
+    pow_ui = |exp, base| (
+        let (result, _) = base._borrow(|base_ptr|
+            MPFR::_init_by(base.get_prec, |out_ptr| 
+                FFI_CALL_IO[CInt mpfr_pow_ui(Ptr, Ptr, CUnsignedLong, CInt), 
+                    out_ptr, base_ptr, exp.c_unsigned_long, RoundMode::rndn().to_c_rnd]
+            )
+        );
+        result
+    );
+
+    // Power function with signed integer exponent.
+    // 
+    // # Parameters
+    // - `exponent`: The signed integer exponent.
+    // - `base`: The base.
+    pow_si : I64 -> MPFR -> MPFR;
+    pow_si = |exp, base| (
+        let (result, _) = base._borrow(|base_ptr|
+            MPFR::_init_by(base.get_prec, |out_ptr| 
+                FFI_CALL_IO[CInt mpfr_pow_si(Ptr, Ptr, CLong, CInt), 
+                    out_ptr, base_ptr, exp.c_long, RoundMode::rndn().to_c_rnd]
+            )
+        );
+        result
+    );
+
+    // Multiply by 2^n (efficient bit shift).
+    // 
+    // # Parameters
+    // - `n`: The exponent (unsigned).
+    // - `x`: The number to multiply.
+    mul_2ui : U64 -> MPFR -> MPFR;
+    mul_2ui = |n, num| (
+        let (result, _) = num._borrow(|num_ptr|
+            MPFR::_init_by(num.get_prec, |out_ptr| 
+                FFI_CALL_IO[CInt mpfr_mul_2ui(Ptr, Ptr, CUnsignedLong, CInt), 
+                    out_ptr, num_ptr, n.c_unsigned_long, RoundMode::rndn().to_c_rnd]
+            )
+        );
+        result
+    );
+
+    // Multiply by 2^n where n can be negative (efficient bit shift).
+    // 
+    // # Parameters
+    // - `n`: The exponent (signed).
+    // - `x`: The number to multiply.
+    mul_2si : I64 -> MPFR -> MPFR;
+    mul_2si = |n, num| (
+        let (result, _) = num._borrow(|num_ptr|
+            MPFR::_init_by(num.get_prec, |out_ptr| 
+                FFI_CALL_IO[CInt mpfr_mul_2si(Ptr, Ptr, CLong, CInt), 
+                    out_ptr, num_ptr, n.c_long, RoundMode::rndn().to_c_rnd]
+            )
+        );
+        result
+    );
+
+    // Divide by 2^n (efficient bit shift).
+    // 
+    // # Parameters
+    // - `n`: The exponent (unsigned).
+    // - `x`: The number to divide.
+    div_2ui : U64 -> MPFR -> MPFR;
+    div_2ui = |n, num| (
+        let (result, _) = num._borrow(|num_ptr|
+            MPFR::_init_by(num.get_prec, |out_ptr| 
+                FFI_CALL_IO[CInt mpfr_div_2ui(Ptr, Ptr, CUnsignedLong, CInt), 
+                    out_ptr, num_ptr, n.c_unsigned_long, RoundMode::rndn().to_c_rnd]
+            )
+        );
+        result
+    );
+
+    // Divide by 2^n where n can be negative (efficient bit shift).
+    // 
+    // # Parameters
+    // - `n`: The exponent (signed).
+    // - `x`: The number to divide.
+    div_2si : I64 -> MPFR -> MPFR;
+    div_2si = |n, num| (
+        let (result, _) = num._borrow(|num_ptr|
+            MPFR::_init_by(num.get_prec, |out_ptr| 
+                FFI_CALL_IO[CInt mpfr_div_2si(Ptr, Ptr, CLong, CInt), 
+                    out_ptr, num_ptr, n.c_long, RoundMode::rndn().to_c_rnd]
+            )
+        );
+        result
+    );
+
+    // Exponential function.
+    // 
+    // # Parameters
+    // - `x`: The number to exponentiate.
+    exp : MPFR -> MPFR;
+    exp = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_exp(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Natural logarithm.
+    // 
+    // # Parameters
+    // - `x`: The number to take logarithm of.
+    log : MPFR -> MPFR;
+    log = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_log(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Base-2 logarithm.
+    // 
+    // # Parameters
+    // - `x`: The number to take logarithm of.
+    log2 : MPFR -> MPFR;
+    log2 = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_log2(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Base-10 logarithm.
+    // 
+    // # Parameters
+    // - `x`: The number to take logarithm of.
+    log10 : MPFR -> MPFR;
+    log10 = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_log10(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Base-2 exponential function (2^x).
+    // 
+    // # Parameters
+    // - `x`: The exponent.
+    exp2 : MPFR -> MPFR;
+    exp2 = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_exp2(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Base-10 exponential function (10^x).
+    // 
+    // # Parameters
+    // - `x`: The exponent.
+    exp10 : MPFR -> MPFR;
+    exp10 = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_exp10(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // exp(x) - 1, computed accurately even for small x.
+    // 
+    // # Parameters
+    // - `x`: The number to exponentiate.
+    expm1 : MPFR -> MPFR;
+    expm1 = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_expm1(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // log(1 + x), computed accurately even for small x.
+    // 
+    // # Parameters
+    // - `x`: The number to add to 1 before taking logarithm.
+    log1p : MPFR -> MPFR;
+    log1p = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_log1p(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Sine function.
+    // 
+    // # Parameters
+    // - `x`: The angle in radians.
+    sin : MPFR -> MPFR;
+    sin = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_sin(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Cosine function.
+    // 
+    // # Parameters
+    // - `x`: The angle in radians.
+    cos : MPFR -> MPFR;
+    cos = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_cos(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Tangent function.
+    // 
+    // # Parameters
+    // - `x`: The angle in radians.
+    tan : MPFR -> MPFR;
+    tan = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_tan(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Arcsine function.
+    // 
+    // # Parameters
+    // - `x`: The value (must be in [-1, 1]).
+    asin : MPFR -> MPFR;
+    asin = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_asin(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Arccosine function.
+    // 
+    // # Parameters
+    // - `x`: The value (must be in [-1, 1]).
+    acos : MPFR -> MPFR;
+    acos = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_acos(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Arctangent function.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    atan : MPFR -> MPFR;
+    atan = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_atan(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Secant function: sec(x) = 1/cos(x).
+    // 
+    // # Parameters
+    // - `x`: The angle in radians.
+    sec : MPFR -> MPFR;
+    sec = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_sec(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Cosecant function: csc(x) = 1/sin(x).
+    // 
+    // # Parameters
+    // - `x`: The angle in radians.
+    csc : MPFR -> MPFR;
+    csc = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_csc(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Cotangent function: cot(x) = 1/tan(x).
+    // 
+    // # Parameters
+    // - `x`: The angle in radians.
+    cot : MPFR -> MPFR;
+    cot = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_cot(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Two-argument arctangent function (atan2).
+    // 
+    // # Parameters
+    // - `y`: The y coordinate.
+    // - `x`: The x coordinate.
+    atan2 : MPFR -> MPFR -> MPFR;
+    atan2 = |y, x| (
+        let prec = if y.get_prec >= x.get_prec { y.get_prec } else { x.get_prec };
+        let (num, _) = _binary_op(RoundMode::rndn(), prec, 
+            |(out_ptr, y_ptr, x_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_atan2(Ptr, Ptr, Ptr, CInt), out_ptr, y_ptr, x_ptr, rnd],
+            y, x
+        );
+        num
+    );
+
+    // Mathematical constant Pi.
+    // 
+    // # Parameters
+    // - `prec`: The precision in bits.
+    const_pi : Precision -> MPFR;
+    const_pi = |prec| (
+        let (num, _) = MPFR::_init_by(prec, |ptr| 
+            FFI_CALL_IO[CInt mpfr_const_pi(Ptr, CInt), ptr, RoundMode::rndn().to_c_rnd]
+        );
+        num
+    );
+
+    // Mathematical constant log(2).
+    // 
+    // # Parameters
+    // - `prec`: The precision in bits.
+    const_log2 : Precision -> MPFR;
+    const_log2 = |prec| (
+        let (num, _) = MPFR::_init_by(prec, |ptr| 
+            FFI_CALL_IO[CInt mpfr_const_log2(Ptr, CInt), ptr, RoundMode::rndn().to_c_rnd]
+        );
+        num
+    );
+
+    // Mathematical constant Euler's constant (0.577...).
+    // 
+    // # Parameters
+    // - `prec`: The precision in bits.
+    const_euler : Precision -> MPFR;
+    const_euler = |prec| (
+        let (num, _) = MPFR::_init_by(prec, |ptr| 
+            FFI_CALL_IO[CInt mpfr_const_euler(Ptr, CInt), ptr, RoundMode::rndn().to_c_rnd]
+        );
+        num
+    );
+
+    // Mathematical constant Catalan's constant (0.915...).
+    // 
+    // # Parameters
+    // - `prec`: The precision in bits.
+    const_catalan : Precision -> MPFR;
+    const_catalan = |prec| (
+        let (num, _) = MPFR::_init_by(prec, |ptr| 
+            FFI_CALL_IO[CInt mpfr_const_catalan(Ptr, CInt), ptr, RoundMode::rndn().to_c_rnd]
+        );
+        num
+    );
+
+    // Test if the sign bit is set (even for NaN and zero).
+    // 
+    // # Parameters
+    // - `x`: The number to check sign bit of.
+    signbit : MPFR -> Bool;
+    signbit = |num| (
+        num._borrow(|ptr| FFI_CALL[CInt mpfr_signbit(Ptr), ptr] != 0.c_int)
+    );
+
+    // Copy the sign of y to x.
+    // 
+    // # Parameters
+    // - `x`: The number to copy magnitude from.
+    // - `y`: The number to copy sign from.
+    copysign : MPFR -> MPFR -> MPFR;
+    copysign = |x, y| (
+        let prec = x.get_prec;
+        let (result, _) = x._borrow(|x_ptr|
+            y._borrow(|y_ptr|
+                MPFR::_init_by(prec, |out_ptr| 
+                    FFI_CALL_IO[CInt mpfr_copysign(Ptr, Ptr, Ptr, CInt), 
+                        out_ptr, x_ptr, y_ptr, RoundMode::rndn().to_c_rnd]
+                )
+            )
+        );
+        result
+    );
+
+    // Set the sign of x according to the boolean s (false = positive, true = negative).
+    // 
+    // # Parameters
+    // - `sign`: The sign to set (false for positive, true for negative).
+    // - `x`: The number to set sign of.
+    setsign : Bool -> MPFR -> MPFR;
+    setsign = |s, num| (
+        let sign = if s { 1.c_int } else { 0.c_int };
+        let (result, _) = num._borrow(|num_ptr|
+            MPFR::_init_by(num.get_prec, |out_ptr| 
+                FFI_CALL_IO[CInt mpfr_setsign(Ptr, Ptr, CInt, CInt), 
+                    out_ptr, num_ptr, sign, RoundMode::rndn().to_c_rnd]
+            )
+        );
+        result
+    );
+
+    // Return the next floating-point number in the direction of y.
+    // 
+    // # Parameters
+    // - `x`: The starting number.
+    // - `direction`: The direction to move toward.
+    nexttoward : MPFR -> MPFR -> MPFR;
+    nexttoward = |x, y| (
+        let (result, _) = x._borrow(|x_ptr|
+            y._borrow(|y_ptr|
+                x._mutate(|out_ptr| 
+                    FFI_CALL_IO[() mpfr_nexttoward(Ptr, Ptr), out_ptr, y_ptr];;
+                    pure $ 0.c_int
+                )
+            )
+        );
+        result
+    );
+
+    // Return the next floating-point number toward +infinity.
+    // 
+    // # Parameters
+    // - `x`: The starting number.
+    nextabove : MPFR -> MPFR;
+    nextabove = |num| (
+        let (result, _) = num._mutate(|num_ptr|
+            FFI_CALL_IO[() mpfr_nextabove(Ptr), num_ptr];;
+            pure $ 0.c_int
+        );
+        result
+    );
+
+    // Return the next floating-point number toward -infinity.
+    // 
+    // # Parameters
+    // - `x`: The starting number.
+    nextbelow : MPFR -> MPFR;
+    nextbelow = |num| (
+        let (result, _) = num._mutate(|num_ptr|
+            FFI_CALL_IO[() mpfr_nextbelow(Ptr), num_ptr];;
+            pure $ 0.c_int
+        );
+        result
+    );
+
+    // Hyperbolic sine function.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    sinh : MPFR -> MPFR;
+    sinh = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_sinh(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Hyperbolic cosine function.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    cosh : MPFR -> MPFR;
+    cosh = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_cosh(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Hyperbolic tangent function.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    tanh : MPFR -> MPFR;
+    tanh = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_tanh(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Inverse hyperbolic sine function.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    asinh : MPFR -> MPFR;
+    asinh = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_asinh(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Inverse hyperbolic cosine function.
+    // 
+    // # Parameters
+    // - `x`: The value (must be >= 1).
+    acosh : MPFR -> MPFR;
+    acosh = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_acosh(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Inverse hyperbolic tangent function.
+    // 
+    // # Parameters
+    // - `x`: The value (must be in (-1, 1)).
+    atanh : MPFR -> MPFR;
+    atanh = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_atanh(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Hyperbolic secant function: sech(x) = 1/cosh(x).
+    // 
+    // # Parameters
+    // - `x`: The value.
+    sech : MPFR -> MPFR;
+    sech = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_sech(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Hyperbolic cosecant function: csch(x) = 1/sinh(x).
+    // 
+    // # Parameters
+    // - `x`: The value.
+    csch : MPFR -> MPFR;
+    csch = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_csch(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Hyperbolic cotangent function: coth(x) = 1/tanh(x).
+    // 
+    // # Parameters
+    // - `x`: The value.
+    coth : MPFR -> MPFR;
+    coth = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_coth(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Gamma function.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    gamma : MPFR -> MPFR;
+    gamma = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_gamma(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Natural logarithm of the absolute value of the Gamma function.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    lngamma : MPFR -> MPFR;
+    lngamma = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_lngamma(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Error function.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    erf : MPFR -> MPFR;
+    erf = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_erf(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Complementary error function.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    erfc : MPFR -> MPFR;
+    erfc = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_erfc(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Riemann zeta function.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    zeta : MPFR -> MPFR;
+    zeta = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_zeta(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Riemann zeta function for unsigned integer argument.
+    // 
+    // # Parameters
+    // - `n`: The unsigned integer argument.
+    // - `prec`: The precision in bits.
+    zeta_ui : U64 -> Precision -> MPFR;
+    zeta_ui = |n, prec| (
+        let (num, _) = MPFR::_init_by(prec, |ptr| 
+            FFI_CALL_IO[CInt mpfr_zeta_ui(Ptr, CUnsignedLong, CInt), 
+                ptr, n.c_unsigned_long, RoundMode::rndn().to_c_rnd]
+        );
+        num
+    );
+
+    // Beta function: B(x, y) = Γ(x)Γ(y)/Γ(x+y).
+    // 
+    // # Parameters
+    // - `x`: The first parameter.
+    // - `y`: The second parameter.
+    beta : MPFR -> MPFR -> MPFR;
+    beta = |x, y| (
+        let prec = if x.get_prec >= y.get_prec { x.get_prec } else { y.get_prec };
+        let (num, _) = _binary_op(RoundMode::rndn(), prec, 
+            |(out_ptr, x_ptr, y_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_beta(Ptr, Ptr, Ptr, CInt), out_ptr, x_ptr, y_ptr, rnd],
+            x, y
+        );
+        num
+    );
+
+    // Digamma function (psi function): ψ(x) = Γ'(x)/Γ(x).
+    // 
+    // # Parameters
+    // - `x`: The value.
+    digamma : MPFR -> MPFR;
+    digamma = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_digamma(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Bessel function of the first kind of order 0.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    j0 : MPFR -> MPFR;
+    j0 = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_j0(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Bessel function of the first kind of order 1.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    j1 : MPFR -> MPFR;
+    j1 = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_j1(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Bessel function of the first kind of order n.
+    // 
+    // # Parameters
+    // - `n`: The order.
+    // - `x`: The value.
+    jn : I64 -> MPFR -> MPFR;
+    jn = |n, num| (
+        let (result, _) = num._borrow(|num_ptr|
+            MPFR::_init_by(num.get_prec, |out_ptr| 
+                FFI_CALL_IO[CInt mpfr_jn(Ptr, CLong, Ptr, CInt), 
+                    out_ptr, n.c_long, num_ptr, RoundMode::rndn().to_c_rnd]
+            )
+        );
+        result
+    );
+
+    // Bessel function of the second kind of order 0.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    y0 : MPFR -> MPFR;
+    y0 = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_y0(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Bessel function of the second kind of order 1.
+    // 
+    // # Parameters
+    // - `x`: The value.
+    y1 : MPFR -> MPFR;
+    y1 = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_y1(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Bessel function of the second kind of order n.
+    // 
+    // # Parameters
+    // - `n`: The order.
+    // - `x`: The value.
+    yn : I64 -> MPFR -> MPFR;
+    yn = |n, num| (
+        let (result, _) = num._borrow(|num_ptr|
+            MPFR::_init_by(num.get_prec, |out_ptr| 
+                FFI_CALL_IO[CInt mpfr_yn(Ptr, CLong, Ptr, CInt), 
+                    out_ptr, n.c_long, num_ptr, RoundMode::rndn().to_c_rnd]
+            )
+        );
+        result
+    );
+
+    // Airy function Ai(x).
+    // 
+    // # Parameters
+    // - `x`: The value.
+    ai : MPFR -> MPFR;
+    ai = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_ai(Ptr, Ptr, CInt), out_ptr, num_ptr, rnd],
+            num
+        );
+        result
+    );
+
+    // Integer and rounding functions
+
+    // Round to the next higher integer.
+    // 
+    // # Parameters
+    // - `x`: The number to round up.
+    ceil : MPFR -> MPFR;
+    ceil = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_ceil(Ptr, Ptr), out_ptr, num_ptr],
+            num
+        );
+        result
+    );
+
+    // Round to the next lower integer.
+    // 
+    // # Parameters
+    // - `x`: The number to round down.
+    floor : MPFR -> MPFR;
+    floor = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_floor(Ptr, Ptr), out_ptr, num_ptr],
+            num
+        );
+        result
+    );
+
+    // Round to the nearest integer, rounding halfway cases away from zero.
+    // 
+    // # Parameters
+    // - `x`: The number to round.
+    round : MPFR -> MPFR;
+    round = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_round(Ptr, Ptr), out_ptr, num_ptr],
+            num
+        );
+        result
+    );
+
+    // Round to the next integer toward zero.
+    // 
+    // # Parameters
+    // - `x`: The number to truncate.
+    trunc : MPFR -> MPFR;
+    trunc = |num| (
+        let (result, _) = _unary_op(RoundMode::rndn(), 
+            |(out_ptr, num_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_trunc(Ptr, Ptr), out_ptr, num_ptr],
+            num
+        );
+        result
+    );
+
+    // Miscellaneous functions
+
+    // Return the minimum of two MPFR numbers.
+    // 
+    // # Parameters
+    // - `x`: The first number.
+    // - `y`: The second number.
+    min : MPFR -> MPFR -> MPFR;
+    min = |lhs, rhs| (
+        let prec = if lhs.get_prec >= rhs.get_prec { lhs.get_prec } else { rhs.get_prec };
+        let (num, _) = _binary_op(RoundMode::rndn(), prec, 
+            |(out_ptr, lhs_ptr, rhs_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_min(Ptr, Ptr, Ptr, CInt), out_ptr, lhs_ptr, rhs_ptr, rnd],
+            lhs, rhs
+        );
+        num
+    );
+
+    // Return the maximum of two MPFR numbers.
+    // 
+    // # Parameters
+    // - `x`: The first number.
+    // - `y`: The second number.
+    max : MPFR -> MPFR -> MPFR;
+    max = |lhs, rhs| (
+        let prec = if lhs.get_prec >= rhs.get_prec { lhs.get_prec } else { rhs.get_prec };
+        let (num, _) = _binary_op(RoundMode::rndn(), prec, 
+            |(out_ptr, lhs_ptr, rhs_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_max(Ptr, Ptr, Ptr, CInt), out_ptr, lhs_ptr, rhs_ptr, rnd],
+            lhs, rhs
+        );
+        num
+    );
+
+    // Fused multiply-add: (x * y) + z, computed with a single rounding.
+    // 
+    // # Parameters
+    // - `x`: The first multiplicand.
+    // - `y`: The second multiplicand.
+    // - `z`: The addend.
+    fma : MPFR -> MPFR -> MPFR -> MPFR;
+    fma = |x, y, z| (
+        let prec = [x.get_prec, y.get_prec, z.get_prec].to_iter.fold(0, max);
+        let rnd_c = RoundMode::rndn().to_c_rnd;
+        x._borrow(|x_ptr|
+            y._borrow(|y_ptr|
+                z._borrow(|z_ptr|
+                    MPFR::_init_by(prec, |out_ptr| 
+                        FFI_CALL_IO[CInt mpfr_fma(Ptr, Ptr, Ptr, Ptr, CInt), 
+                            out_ptr, x_ptr, y_ptr, z_ptr, rnd_c]
+                    )
+                )
+            )
+        ).@0
+    );
+
+    // Euclidean norm: sqrt(x^2 + y^2), computed without intermediate overflow or underflow.
+    // 
+    // # Parameters
+    // - `x`: The first component.
+    // - `y`: The second component.
+    hypot : MPFR -> MPFR -> MPFR;
+    hypot = |x, y| (
+        let prec = if x.get_prec >= y.get_prec { x.get_prec } else { y.get_prec };
+        let (num, _) = _binary_op(RoundMode::rndn(), prec, 
+            |(out_ptr, x_ptr, y_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_hypot(Ptr, Ptr, Ptr, CInt), out_ptr, x_ptr, y_ptr, rnd],
+            x, y
+        );
+        num
+    );
+
+    // Arithmetic-geometric mean of two MPFR numbers.
+    // 
+    // # Parameters
+    // - `x`: The first number.
+    // - `y`: The second number.
+    agm : MPFR -> MPFR -> MPFR;
+    agm = |x, y| (
+        let prec = if x.get_prec >= y.get_prec { x.get_prec } else { y.get_prec };
+        let (num, _) = _binary_op(RoundMode::rndn(), prec, 
+            |(out_ptr, x_ptr, y_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_agm(Ptr, Ptr, Ptr, CInt), out_ptr, x_ptr, y_ptr, rnd],
+            x, y
+        );
+        num
+    );
+
+    // Factorial function: n!
+    // 
+    // # Parameters
+    // - `n`: The non-negative integer to compute factorial of.
+    // - `prec`: The precision in bits.
+    fac_ui : U64 -> Precision -> MPFR;
+    fac_ui = |n, prec| (
+        let (num, _) = MPFR::_init_by(prec, |ptr| 
+            FFI_CALL_IO[CInt mpfr_fac_ui(Ptr, CUnsignedLong, CInt), 
+                ptr, n.c_unsigned_long, RoundMode::rndn().to_c_rnd]
+        );
+        num
+    );
+
+    // Floating-point remainder: x - n*y where n is the integer quotient x/y rounded toward zero.
+    // 
+    // # Parameters
+    // - `x`: The dividend.
+    // - `y`: The divisor.
+    fmod : MPFR -> MPFR -> MPFR;
+    fmod = |x, y| (
+        let prec = if x.get_prec >= y.get_prec { x.get_prec } else { y.get_prec };
+        let (num, _) = _binary_op(RoundMode::rndn(), prec, 
+            |(out_ptr, x_ptr, y_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_fmod(Ptr, Ptr, Ptr, CInt), out_ptr, x_ptr, y_ptr, rnd],
+            x, y
+        );
+        num
+    );
+
+    // IEEE remainder: x - n*y where n is the integer quotient x/y rounded to nearest.
+    // 
+    // # Parameters
+    // - `x`: The dividend.
+    // - `y`: The divisor.
+    remainder : MPFR -> MPFR -> MPFR;
+    remainder = |x, y| (
+        let prec = if x.get_prec >= y.get_prec { x.get_prec } else { y.get_prec };
+        let (num, _) = _binary_op(RoundMode::rndn(), prec, 
+            |(out_ptr, x_ptr, y_ptr, rnd)| 
+                FFI_CALL_IO[CInt mpfr_remainder(Ptr, Ptr, Ptr, CInt), out_ptr, x_ptr, y_ptr, rnd],
+            x, y
+        );
+        num
+    );
+
     // Comparison functions
 
     // Compare two MPFR numbers.
     // Returns negative if lhs < rhs, zero if lhs == rhs, positive if lhs > rhs.
+    // 
+    // # Parameters
+    // - `lhs`: The left-hand side number.
+    // - `rhs`: The right-hand side number.
     cmp : MPFR -> MPFR -> I64;
     cmp = |lhs, rhs| (
         lhs._borrow(|lhs_ptr|
@@ -358,6 +1505,10 @@ namespace MPFR {
     );
 
     // Check if two MPFR numbers are equal.
+    // 
+    // # Parameters
+    // - `lhs`: The left-hand side number.
+    // - `rhs`: The right-hand side number.
     equal : MPFR -> MPFR -> Bool;
     equal = |lhs, rhs| (
         lhs._borrow(|lhs_ptr|
@@ -368,6 +1519,10 @@ namespace MPFR {
     );
 
     // Check if lhs < rhs.
+    // 
+    // # Parameters
+    // - `lhs`: The left-hand side number.
+    // - `rhs`: The right-hand side number.
     less : MPFR -> MPFR -> Bool;
     less = |lhs, rhs| (
         lhs._borrow(|lhs_ptr|
@@ -378,6 +1533,10 @@ namespace MPFR {
     );
 
     // Check if lhs <= rhs.
+    // 
+    // # Parameters
+    // - `lhs`: The left-hand side number.
+    // - `rhs`: The right-hand side number.
     lesseq : MPFR -> MPFR -> Bool;
     lesseq = |lhs, rhs| (
         lhs._borrow(|lhs_ptr|
@@ -390,24 +1549,36 @@ namespace MPFR {
     // Special value predicates
 
     // Check if the value is NaN.
+    // 
+    // # Parameters
+    // - `x`: The number to check.
     is_nan : MPFR -> Bool;
     is_nan = |num| (
         num._borrow(|ptr| FFI_CALL[CInt mpfr_nan_p(Ptr), ptr] != 0.c_int)
     );
 
     // Check if the value is infinite.
+    // 
+    // # Parameters
+    // - `x`: The number to check.
     is_inf : MPFR -> Bool;
     is_inf = |num| (
         num._borrow(|ptr| FFI_CALL[CInt mpfr_inf_p(Ptr), ptr] != 0.c_int)
     );
 
     // Check if the value is a regular number (not NaN, not Inf).
+    // 
+    // # Parameters
+    // - `x`: The number to check.
     is_number : MPFR -> Bool;
     is_number = |num| (
         num._borrow(|ptr| FFI_CALL[CInt mpfr_number_p(Ptr), ptr] != 0.c_int)
     );
 
     // Check if the value is zero.
+    // 
+    // # Parameters
+    // - `x`: The number to check.
     is_zero : MPFR -> Bool;
     is_zero = |num| (
         num._borrow(|ptr| FFI_CALL[CInt mpfr_zero_p(Ptr), ptr] != 0.c_int)
@@ -415,6 +1586,9 @@ namespace MPFR {
 
     // Get the sign of a number.
     // Returns negative if num < 0, zero if num == 0, positive if num > 0.
+    // 
+    // # Parameters
+    // - `x`: The number to get sign of.
     sgn : MPFR -> I64;
     sgn = |num| (
         num._borrow(|ptr| FFI_CALL[CInt mpfr_sgn(Ptr), ptr].i64)

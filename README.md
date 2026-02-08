@@ -28,22 +28,16 @@ let x = MPFR::mpfr(113, 42);  // Create MPFR with 113-bit precision, value 42
 
 ### Rounding Modes
 
-All arithmetic operations use explicit rounding modes. The default rounding mode is RNDN (round to nearest, ties to even). For trait implementations (Add, Sub, Mul, Div), RNDN is used with precision set to the maximum of the two operands.
+All arithmetic operations use RNDN (round to nearest, ties to even) rounding mode. For trait implementations (Add, Sub, Mul, Div), precision is set to the maximum of the two operands.
 
 ```fix
 let z = x + y;  // Uses RNDN rounding, precision is max(x.prec, y.prec)
 ```
 
-For explicit control over rounding:
-
-```fix
-let z = MPFR::add_with_rnd(x, y, RoundMode::rndu());  // Round toward +∞
-```
-
 ## Features
 
 - **Arbitrary precision floating-point arithmetic**: Set precision to any valid bit count
-- **Multiple rounding modes**: RNDN (nearest), RNDZ (toward zero), RNDU (toward +∞), RNDD (toward -∞), RNDA (away from zero)
+- **RNDN rounding mode**: All operations use round-to-nearest (ties to even) for reliable precision
 - **Rich mathematical functions**: Trigonometric, exponential, logarithmic, special functions, and more
 - **Type conversions**: Convert to/from I64, F64, String, MPZ, MPQ
 - **Functional style**: Immutable data structures with automatic memory management
