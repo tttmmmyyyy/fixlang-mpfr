@@ -6,6 +6,15 @@ It's currently verified to work with MPFR 4.1.0.
 
 To use this library, you must have MPFR and GMP installed and be able to dynamically link to them using the `-lmpfr -lgmp` flags.
 
+## Installation
+
+On Ubuntu (Debian), you need to install the required libraries:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y libgmp-dev libmpfr-dev
+```
+
 ## Overview
 
 MPFR provides arbitrary-precision floating-point arithmetic with well-defined rounding modes and precise semantics. This wrapper makes MPFR functionality available in Fix with a functional programming style.
