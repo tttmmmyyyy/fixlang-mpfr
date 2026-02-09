@@ -32,7 +32,7 @@ Due to Fix's allowed naming conventions, some functions deviate from this rule.
 Unlike MPFR's C API which has a global default precision, this wrapper **requires explicit precision specification** for all constructors. This makes the code more functional and explicit.
 
 ```fix
-let x = MPFR::mpfr(113, 42);  // Create MPFR with 113-bit precision, value 42
+let x = MPFR::mpfr(113, 3.14);  // Create MPFR with 113-bit precision, value 3.14
 ```
 
 ### Rounding Modes
@@ -62,8 +62,8 @@ import MPFR;
 main : IO ();
 main = (
     // Create MPFR numbers with 113-bit precision
-    let x = MPFR::mpfr(113, 2);
-    let y = MPFR::mpfr(113, 3);
+    let x = MPFR::mpfr(113, 2.0);
+    let y = MPFR::mpfr(113, 3.0);
     
     // Arithmetic operations
     let sum = x + y;

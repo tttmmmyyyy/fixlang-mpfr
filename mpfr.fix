@@ -151,8 +151,8 @@ namespace MPFR {
     // # Parameters
     // - `prec`: The precision in bits.
     // - `val`: The I64 value to convert.
-    mpfr : Precision -> I64 -> MPFR;
-    mpfr = |prec, val| (
+    mpfr_i : Precision -> I64 -> MPFR;
+    mpfr_i = |prec, val| (
         let (num, _) = MPFR::_init_by(prec, |ptr| 
             FFI_CALL_IO[CInt mpfr_set_si(Ptr, CLong, CInt), ptr, val.c_long, RoundMode::rndn().to_c_rnd]
         );
@@ -177,8 +177,8 @@ namespace MPFR {
     // # Parameters
     // - `prec`: The precision in bits.
     // - `val`: The F64 value to convert.
-    mpfr_f64 : Precision -> F64 -> MPFR;
-    mpfr_f64 = |prec, val| (
+    mpfr : Precision -> F64 -> MPFR;
+    mpfr = |prec, val| (
         let (num, _) = MPFR::_init_by(prec, |ptr| 
             FFI_CALL_IO[CInt mpfr_set_d(Ptr, CDouble, CInt), ptr, val, RoundMode::rndn().to_c_rnd]
         );
@@ -207,7 +207,7 @@ namespace MPFR {
     // # Parameters
     // - `prec`: The precision in bits.
     zero : Precision -> MPFR;
-    zero = |prec| mpfr(prec, 0);
+    zero = |prec| mpfr_i(prec, 0);
 
     // Create an MPFR value representing NaN (Not a Number).
     // 
