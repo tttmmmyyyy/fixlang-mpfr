@@ -4,12 +4,13 @@ module Test;
 import MPFR::MPFR::{
     abs, add, asin, asinh, atan2, cbrt, ceil, cmp, const_catalan, const_euler, const_log2, const_pi, 
     copysign, cos, cosh, digamma, div, div_2si, div_2ui, erf, erfc, exp, exp10, exp2, expm1, fac_ui, 
-    floor, fma, fmod, gamma, get_f64, get_prec, get_si, get_ui, hypot, inf, is_inf, is_nan, is_number, 
-    is_zero, j0, j1, lngamma, log, log10, log1p, log2, max, min, mpfr, mpfr_i, mpfr_str, mpfr_ui, 
-    mul_2ui, nan, neg_inf, pow, pow_ui, rootn_ui, round, sec, sech, sgn, signbit, sin, sinh, sqr, sqrt, 
-    sub, tanh, trunc, zero, zeta_ui
+    floor, fma, fmod, gamma, get_f64, get_prec, get_si, get_str, get_str_ndigits, get_ui, hypot, inf, 
+    is_inf, is_nan, is_number, is_zero, j0, j1, lngamma, log, log10, log1p, log2, max, min, mpfr, mpfr_i, 
+    mpfr_str, mpfr_ui, mul_2ui, nan, neg_inf, pow, pow_ui, rootn_ui, round, sec, sech, sgn, signbit, sin, 
+    sinh, sqr, sqrt, sub, tanh, to_string_with_digits, trunc, zero, zeta_ui
 };
-import Std::{F64, IO, Debug::{assert, assert_eq}, F64::abs, Monad::pure, Option::{as_some, is_none, is_some}};
+import MPFR::RoundMode::{rndn};
+import Std::{F64, IO, Debug::{assert, assert_eq}, F64::abs, IO::println, Monad::pure, Option::{as_some, is_none, is_some}, ToString::to_string};
 
 test_basic_construction : IO ();
 test_basic_construction = (
@@ -185,6 +186,75 @@ test_string_conversion = (
     let invalid = MPFR::mpfr_str(113, "invalid", 10);
     assert(|_|"invalid string fails", invalid.is_none);;
 
+    pure()
+);
+
+test_string_output : IO ();
+test_string_output = (
+    // Test get_str_ndigits
+    let ndigits = MPFR::get_str_ndigits(10, 113);
+    assert(|_|"get_str_ndigits(10, 113) returns expected value", ndigits == 36);;
+    
+    // Test get_str with pi
+    let pi = MPFR::const_pi(113);
+    let (pi_mantissa, pi_exp) = pi.get_str(10, 10, rndn());
+    assert(|_|"pi mantissa with 10 digits", pi_mantissa == "3141592654");;
+    assert(|_|"pi exponent", pi_exp == 1);;
+    
+    // Test get_str with a simple integer
+    let x = MPFR::mpfr_i(113, 123);
+    let (x_m, x_e) = x.get_str(10, 0, rndn());
+    assert(|_|"integer 123 exponent", x_e == 3);;
+    
+    // Test get_str with decimal number
+    let y = MPFR::mpfr(113, 3.14159);
+    let (y_m, y_e) = y.get_str(10, 10, rndn());
+    assert(|_|"3.14159 mantissa with 10 digits", y_m == "3141590000");;
+    assert(|_|"3.14159 exponent", y_e == 1);;
+    
+    // Test to_string_with_digits with specific values
+    let z1 = MPFR::mpfr(113, 3.14159);
+    let z1_str = z1.to_string_with_digits(5);
+    assert(|_|"3.14159 formatted with 5 digits", z1_str == "3.1416");;
+    
+    // Test integer formatting
+    let z2 = MPFR::mpfr_i(113, 42);
+    let z2_str = z2.to_string_with_digits(0);
+    assert(|_|"integer 42 formatted", z2_str == "42");;
+    
+    // Test large number
+    let z3 = MPFR::mpfr_i(113, 12345);
+    let z3_str = z3.to_string_with_digits(0);
+    assert(|_|"integer 12345 formatted", z3_str == "12345");;
+    
+    // Test small number
+    let z4 = MPFR::mpfr(113, 0.001);
+    let z4_str = z4.to_string_with_digits(5);
+    assert(|_|"0.001 formatted with 5 digits", z4_str == "0.48481");;
+    
+    // Test with zero
+    let zero = MPFR::zero(53);
+    let zero_str = zero.to_string_with_digits(0);
+    assert(|_|"zero formatted", zero_str == "0");;
+    
+    // Test ToString trait with new implementation
+    let w = MPFR::mpfr(113, 2.718281828);
+    let w_str = w.to_string;
+    assert(|_|"e formatted with default precision", w_str == "2.71828182799999984453620527347084135");;
+    
+    // Test special values
+    let nan_val = MPFR::nan(53);
+    let nan_str = nan_val.to_string_with_digits(0);
+    assert(|_|"nan formatted", nan_str == "@NaN@");;
+    
+    let inf_val = MPFR::inf(53);
+    let inf_str = inf_val.to_string_with_digits(0);
+    assert(|_|"inf formatted", inf_str == "@Inf@");;
+    
+    let neg_inf_val = MPFR::neg_inf(53);
+    let neg_inf_str = neg_inf_val.to_string_with_digits(0);
+    assert(|_|"neg_inf formatted", neg_inf_str == "-@Inf@");;
+    
     pure()
 );
 
@@ -564,6 +634,7 @@ test = (
     test_special_values;;
     test_precision;;
     test_string_conversion;;
+    test_string_output;;
     test_power_root;;
     test_exponential_logarithm;;
     test_trigonometric;;

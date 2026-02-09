@@ -4,12 +4,14 @@
 module MPFR;
 
 import Std::{
-    unsafe_is_unique, Add, Bool, Div, Eq, F64, I64, IO, LessThan, LessThanOrEq, Mul, Neg, Option, Ptr, 
-    String, Sub, ToString, U64, Zero, Array::to_iter, 
-    FFI::{CInt, Destructor, Destructor::{borrow, make, mutate_unique}}, IO::unsafe_perform, 
-    Iterator::fold, LessThan::max, Monad::pure, Option::{none, some}, String::borrow_c_str, 
+    undefined, unsafe_is_unique, Add, Array, Bool, Box, Div, Eq, F64, I64, IO, LessThan, LessThanOrEq, 
+    Mul, Neg, Option, Ptr, String, Sub, ToString, U64, Zero, Array::{fill, pop_back, to_iter}, 
+    Box::{@value, make}, 
+    FFI::{mutate_boxed, CInt, Destructor, Destructor::{borrow, make, mutate_unique}}, IO::unsafe_perform, 
+    Iterator::{check_all, check_any, fold}, LessThan::max, Monad::pure, Option::{none, some}, 
+    String::{@size, borrow_c_str, get_bytes, get_sub, starts_with, strip_last_bytes, unsafe_from_c_str_ptr_io}, 
     ToCInt::c_int, ToCLong::c_long, ToCUnsignedLong::c_unsigned_long, ToI64::i64, ToString::to_string, 
-    Tuple2::@0
+    ToU64::u64, Tuple2::@0
 };
 
 // Precision type for MPFR numbers (in bits).
@@ -287,6 +289,119 @@ namespace MPFR {
         num._borrow(|ptr| 
             FFI_CALL[CDouble mpfr_get_d(Ptr, CInt), ptr, RoundMode::rndn().to_c_rnd]
         )
+    );
+
+    // Get the number of digits required to represent an MPFR value in a given base.
+    // 
+    // This function returns the minimal integer m such that any number of p bits,
+    // when output in base b with m digits, can be recovered exactly when read back in base b.
+    // 
+    // # Parameters
+    // - `base`: The base (must be in the range [2, 62]).
+    // - `prec`: The precision in bits.
+    get_str_ndigits : I64 -> Precision -> I64;
+    get_str_ndigits = |base, prec| (
+        if !(2 <= base && base <= 62) {
+            undefined("[MPFR::get_str_ndigits] base must be in the range [2, 62]")
+        };
+        FFI_CALL[CUnsignedLong mpfr_get_str_ndigits(CInt, CLong), base.c_int, prec.c_long].i64
+    );
+
+    // Convert an MPFR value to a string in a given base with specified number of digits.
+    // 
+    // Returns a tuple of (mantissa_string, exponent) where the mantissa is a fraction
+    // with an implicit radix point immediately to the left of the first digit.
+    // For example, the number -3.1416 would be returned as ("-31416", 1).
+    // 
+    // If the number is NaN, returns ("@NaN@", 0).
+    // If the number is +Inf, returns ("@Inf@", 0).
+    // If the number is -Inf, returns ("-@Inf@", 0).
+    // 
+    // # Parameters
+    // - `base`: The base of the string representation (must be in the range [2, 62] or [-36, -2]).
+    // - `n_digits`: Number of significant digits (0 means use get_str_ndigits with the number's precision).
+    // - `rnd`: The rounding mode to use.
+    // - `num`: The MPFR number to convert.
+    get_str : I64 -> I64 -> RoundMode -> MPFR -> (String, I64);
+    get_str = |base, n_digits, rnd, num| (
+        if !(2 <= base && base <= 62 || -36 <= base && base <= -2) {
+            undefined("[MPFR::get_str] base must be in the range [2, 62] or [-36, -2]")
+        };
+        let base_c = base.c_int;
+        let n_digits_c = n_digits.c_unsigned_long;
+        let rnd_c = rnd.to_c_rnd;
+        num._borrow(|num_ptr| (
+            // Use Box to get a mutable pointer for the exponent
+            let exp_box = Box::make(0.c_long);
+            let (exp_box, str_ptr) = exp_box.mutate_boxed(|exp_ptr|
+                FFI_CALL_IO[Ptr mpfr_get_str(Ptr, Ptr, CInt, CUnsignedLong, Ptr, CInt), 
+                    nullptr, exp_ptr, base_c, n_digits_c, num_ptr, rnd_c]
+            );
+            do {
+                let str = *String::unsafe_from_c_str_ptr_io(str_ptr);
+                let exp = exp_box.@value.i64;
+                FFI_CALL_IO[() mpfr_free_str(Ptr), str_ptr];;
+                pure $ (str, exp)
+            }.unsafe_perform
+        ))
+    );
+
+    // Convert an MPFR value to a readable string with specified number of digits in base 10.
+    // 
+    // The output format is similar to standard floating-point notation (e.g., "3.14159", "-1.23e-10").
+    // 
+    // # Parameters
+    // - `n_digits`: Number of significant digits (0 means use get_str_ndigits with the number's precision).
+    // - `num`: The MPFR number to convert.
+    to_string_with_digits : I64 -> MPFR -> String;
+    to_string_with_digits = |n_digits, num| (
+        let (mantissa, exp) = num.get_str(10, n_digits, RoundMode::rndn());
+        
+        // Handle special values (check if contains '@')
+        if mantissa.get_bytes.pop_back.to_iter.check_any(|c| c == '@') {
+            mantissa
+        };
+        
+        // Handle sign
+        let (sign, mantissa) = if mantissa.starts_with("-") {
+            ("-", get_sub(1, @size(mantissa), mantissa))
+        } else {
+            ("", mantissa)
+        };
+        
+        // Handle zero - check if mantissa is empty or all zeros
+        let is_zero = mantissa == "" || mantissa.get_bytes.pop_back.to_iter.check_all(|c| c == '0');
+        if is_zero {
+            sign + "0"
+        };
+        
+        // Remove trailing zeros from mantissa
+        let mantissa = mantissa.strip_last_bytes(|c| c == '0');
+        let len = @size(mantissa);
+        
+        // If mantissa became empty after removing zeros, it was all zeros
+        if len == 0 {
+            sign + "0"
+        };
+        
+        // Format based on exponent
+        if exp == len + 1 || exp == len {
+            // Integer without decimal point (e.g., "314" with exp=3 -> "314")
+            sign + mantissa
+        } else if exp >= 1 && exp < len {
+            // Insert decimal point within the mantissa (e.g., "314" with exp=1 -> "3.14")
+            sign + get_sub(0, exp, mantissa) + "." + get_sub(exp, len, mantissa)
+        } else if exp <= 0 {
+            // Small number with leading zeros (e.g., "314" with exp=-2 -> "0.00314")
+            let zeros = Array::fill((-exp).i64, '0').to_iter.fold("", |c, acc| acc + c.to_string);
+            sign + "0." + zeros + mantissa
+        } else {
+            // Use scientific notation for large exponents
+            let first_char = if @size(mantissa) > 0 { get_sub(0, 1, mantissa) } else { "" };
+            let rest = if @size(mantissa) > 1 { get_sub(1, len, mantissa) } else { "" };
+            let significand = first_char + "." + rest;
+            sign + significand + "e" + (exp - 1).to_string
+        }
     );
 
     // Arithmetic operations
@@ -1643,9 +1758,5 @@ impl MPFR : LessThanOrEq {
 }
 
 impl MPFR : ToString {
-    to_string = |num| (
-        // For now, convert to F64 and use its to_string
-        // TODO: Implement proper mpfr_get_str with exponent handling
-        num.get_f64.to_string
-    );
+    to_string = to_string_with_digits(0);
 }
