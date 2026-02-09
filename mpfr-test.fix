@@ -7,10 +7,10 @@ import MPFR::MPFR::{
     floor, fma, fmod, gamma, get_f64, get_prec, get_si, get_str, get_str_ndigits, get_ui, hypot, inf, 
     is_inf, is_nan, is_number, is_zero, j0, j1, lngamma, log, log10, log1p, log2, max, min, mpfr, mpfr_i, 
     mpfr_str, mpfr_ui, mul_2ui, nan, neg_inf, pow, pow_ui, rootn_ui, round, sec, sech, sgn, signbit, sin, 
-    sinh, sqr, sqrt, sub, tanh, to_string_with_digits, trunc, zero, zeta_ui
+    sinh, sqr, sqrt, sub, tanh, to_string_digits, to_string_exp, to_string_exp_precision, to_string_precision, trunc, zero, zeta_ui
 };
 import MPFR::RoundMode::{rndn};
-import Std::{F64, IO, Debug::{assert, assert_eq}, F64::abs, IO::println, Monad::pure, Option::{as_some, is_none, is_some}, ToString::to_string};
+import Std::{F64, IO, U8, Array::{pop_back, to_iter}, Debug::{assert, assert_eq}, F64::abs, IO::println, Iterator::check_any, Monad::pure, Option::{as_some, is_none, is_some}, String::{get_bytes, starts_with}, ToString::to_string};
 
 test_basic_construction : IO ();
 test_basic_construction = (
@@ -212,29 +212,29 @@ test_string_output = (
     assert(|_|"3.14159 mantissa with 10 digits", y_m == "3141590000");;
     assert(|_|"3.14159 exponent", y_e == 1);;
     
-    // Test to_string_with_digits with specific values
+    // Test to_string_digits with specific values
     let z1 = MPFR::mpfr(113, 3.14159);
-    let z1_str = z1.to_string_with_digits(5);
+    let z1_str = z1.to_string_digits(5);
     assert(|_|"3.14159 formatted with 5 digits", z1_str == "3.1416");;
     
     // Test integer formatting
     let z2 = MPFR::mpfr_i(113, 42);
-    let z2_str = z2.to_string_with_digits(0);
+    let z2_str = z2.to_string_digits(0);
     assert(|_|"integer 42 formatted", z2_str == "42");;
     
     // Test large number
     let z3 = MPFR::mpfr_i(113, 12345);
-    let z3_str = z3.to_string_with_digits(0);
+    let z3_str = z3.to_string_digits(0);
     assert(|_|"integer 12345 formatted", z3_str == "12345");;
     
     // Test small number
     let z4 = MPFR::mpfr(113, 0.001);
-    let z4_str = z4.to_string_with_digits(5);
-    assert(|_|"0.001 formatted with 5 digits", z4_str == "0.48481");;
+    let z4_str = z4.to_string_digits(5);
+    assert(|_|"0.001 formatted with 5 digits", z4_str == "0.001");;
     
     // Test with zero
     let zero = MPFR::zero(53);
-    let zero_str = zero.to_string_with_digits(0);
+    let zero_str = zero.to_string_digits(0);
     assert(|_|"zero formatted", zero_str == "0");;
     
     // Test ToString trait with new implementation
@@ -244,16 +244,67 @@ test_string_output = (
     
     // Test special values
     let nan_val = MPFR::nan(53);
-    let nan_str = nan_val.to_string_with_digits(0);
+    let nan_str = nan_val.to_string_digits(0);
     assert(|_|"nan formatted", nan_str == "@NaN@");;
     
     let inf_val = MPFR::inf(53);
-    let inf_str = inf_val.to_string_with_digits(0);
+    let inf_str = inf_val.to_string_digits(0);
     assert(|_|"inf formatted", inf_str == "@Inf@");;
     
     let neg_inf_val = MPFR::neg_inf(53);
-    let neg_inf_str = neg_inf_val.to_string_with_digits(0);
+    let neg_inf_str = neg_inf_val.to_string_digits(0);
     assert(|_|"neg_inf formatted", neg_inf_str == "-@Inf@");;
+    
+    pure()
+);
+
+test_string_formats : IO ();
+test_string_formats = (
+    // Test to_string_exp
+    let pi = MPFR::const_pi(113);
+    let pi_exp = pi.to_string_exp;
+    assert(|_|"pi in exponential form starts with 3.1", pi_exp.starts_with("3.1"));;
+    assert(|_|"pi in exponential form contains e", pi_exp.get_bytes.pop_back.to_iter.check_any(|c| c == 'e'));;
+    
+    // Test to_string_exp_precision
+    let x = MPFR::mpfr(113, 3.14159);
+    let x_exp2 = x.to_string_exp_precision(2_U8);
+    assert(|_|"3.14159 with exp precision 2", x_exp2 == "3.14e+0");;
+    
+    let y = MPFR::mpfr(113, 123.456);
+    let y_exp3 = y.to_string_exp_precision(3_U8);
+    assert(|_|"123.456 with exp precision 3", y_exp3 == "1.235e+2");;
+    
+    let z = MPFR::mpfr(113, 0.00123);
+    let z_exp4 = z.to_string_exp_precision(4_U8);
+    assert(|_|"0.00123 with exp precision 4 starts with 1.23", z_exp4.starts_with("1.23"));;
+    
+    // Test to_string_precision
+    let a = MPFR::mpfr(113, 3.14159);
+    let a_prec2 = a.to_string_precision(2_U8);
+    assert(|_|"3.14159 with precision 2", a_prec2 == "3.14");;
+    
+    let b = MPFR::mpfr_i(113, 42);
+    let b_prec3 = b.to_string_precision(3_U8);
+    assert(|_|"42 with precision 3", b_prec3 == "42.000");;
+    
+    let c = MPFR::mpfr(113, 0.5);
+    let c_prec5 = c.to_string_precision(5_U8);
+    assert(|_|"0.5 with precision 5", c_prec5 == "0.50000");;
+    
+    // Test special values with new formats
+    let nan_val = MPFR::nan(53);
+    assert(|_|"nan exp format", nan_val.to_string_exp == "@NaN@");;
+    assert(|_|"nan exp precision format", nan_val.to_string_exp_precision(2_U8) == "@NaN@");;
+    assert(|_|"nan precision format", nan_val.to_string_precision(2_U8) == "@NaN@");;
+    
+    let inf_val = MPFR::inf(53);
+    assert(|_|"inf exp format", inf_val.to_string_exp == "@Inf@");;
+    
+    let zero = MPFR::zero(53);
+    assert(|_|"zero exp format", zero.to_string_exp == "0.0e+0");;
+    assert(|_|"zero exp precision 3", zero.to_string_exp_precision(3_U8) == "0.000e+0");;
+    assert(|_|"zero precision 4", zero.to_string_precision(4_U8) == "0.0000");;
     
     pure()
 );
@@ -635,6 +686,7 @@ test = (
     test_precision;;
     test_string_conversion;;
     test_string_output;;
+    test_string_formats;;
     test_power_root;;
     test_exponential_logarithm;;
     test_trigonometric;;

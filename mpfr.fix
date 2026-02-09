@@ -5,8 +5,8 @@ module MPFR;
 
 import Std::{
     undefined, unsafe_is_unique, Add, Array, Bool, Box, Div, Eq, F64, I64, IO, LessThan, LessThanOrEq, 
-    Mul, Neg, Option, Ptr, String, Sub, ToString, U64, Zero, Array::{fill, pop_back, to_iter}, 
-    Box::{@value, make}, 
+    Mul, Neg, Option, Ptr, String, Sub, ToString, U64, U8, Zero, Array::{fill, pop_back, to_iter}, 
+    Box::{@value, make}, Debug::debug_println, 
     FFI::{mutate_boxed, CInt, Destructor, Destructor::{borrow, make, mutate_unique}}, IO::unsafe_perform, 
     Iterator::{check_all, check_any, fold}, LessThan::max, Monad::pure, Option::{none, some}, 
     String::{@size, borrow_c_str, get_bytes, get_sub, starts_with, strip_last_bytes, unsafe_from_c_str_ptr_io}, 
@@ -346,6 +346,196 @@ namespace MPFR {
         ))
     );
 
+    // Convert an MPFR value to exponential form string.
+    // 
+    // The output format is "d.dddd...e±exp" (e.g., "3.14159e+0", "-1.23456e-10").
+    // The number of significant digits is determined by the number's precision.
+    // 
+    // # Parameters
+    // - `num`: The MPFR number to convert.
+    to_string_exp : MPFR -> String;
+    to_string_exp = |num| (
+        let prec = num.get_prec;
+        let n_digits = get_str_ndigits(10, prec);
+        let (mantissa, exp) = num.get_str(10, n_digits, RoundMode::rndn());
+        
+        // Handle special values (check if contains '@')
+        if mantissa.get_bytes.pop_back.to_iter.check_any(|c| c == '@') {
+            mantissa
+        } else {
+            // Handle sign
+            let (sign, mantissa) = if mantissa.starts_with("-") {
+                ("-", get_sub(1, @size(mantissa), mantissa))
+            } else {
+                ("", mantissa)
+            };
+            
+            // Handle zero
+            let is_zero = mantissa == "" || mantissa.get_bytes.pop_back.to_iter.check_all(|c| c == '0');
+            if is_zero {
+                sign + "0.0e+0"
+            } else {
+                // Remove trailing zeros from mantissa
+                let mantissa = mantissa.strip_last_bytes(|c| c == '0');
+                let len = @size(mantissa);
+                
+                if len == 0 {
+                    sign + "0.0e+0"
+                } else {
+                    // Format as d.dddd...e±exp
+                    let first_char = get_sub(0, 1, mantissa);
+                    let rest = if len > 1 { get_sub(1, len, mantissa) } else { "0" };
+                    let significand = first_char + "." + rest;
+                    let exp_val = exp - 1;
+                    let exp_str = if exp_val >= 0 { "e+" + exp_val.to_string } else { "e" + exp_val.to_string };
+                    sign + significand + exp_str
+                }
+            }
+        }
+    );
+
+    // Convert an MPFR value to exponential form string with specified precision.
+    // 
+    // The output format is "d.{prec digits}e±exp" where the number of digits after
+    // the decimal point is exactly `prec`.
+    // 
+    // # Parameters
+    // - `prec`: The number of digits after the decimal point.
+    // - `num`: The MPFR number to convert.
+    to_string_exp_precision : U8 -> MPFR -> String;
+    to_string_exp_precision = |prec, num| (
+        // Request prec+1 significant digits (1 for integer part, prec for fractional part)
+        let n_digits = prec.i64 + 1;
+        let (mantissa, exp) = num.get_str(10, n_digits, RoundMode::rndn());
+        
+        // Handle special values (check if contains '@')
+        if mantissa.get_bytes.pop_back.to_iter.check_any(|c| c == '@') {
+            mantissa
+        } else {
+            // Handle sign
+            let (sign, mantissa) = if mantissa.starts_with("-") {
+                ("-", get_sub(1, @size(mantissa), mantissa))
+            } else {
+                ("", mantissa)
+            };
+            
+            // Handle zero
+            let is_zero = mantissa == "" || mantissa.get_bytes.pop_back.to_iter.check_all(|c| c == '0');
+            if is_zero {
+                let zeros = Array::fill(prec.i64, "0").to_iter.fold("", |s, acc| acc + s);
+                sign + "0." + zeros + "e+0"
+            } else {
+                let len = @size(mantissa);
+                
+                // Pad or truncate mantissa to prec+1 digits
+                let mantissa = if len < n_digits {
+                    // Pad with zeros
+                    let pad_count = n_digits - len;
+                    let zeros = Array::fill(pad_count, "0").to_iter.fold("", |s, acc| acc + s);
+                    mantissa + zeros
+                } else if len > n_digits {
+                    // Truncate
+                    get_sub(0, n_digits, mantissa)
+                } else {
+                    mantissa
+                };
+                
+                // Format as d.{prec digits}e±exp
+                let first_char = get_sub(0, 1, mantissa);
+                let rest = if n_digits > 1 { get_sub(1, n_digits, mantissa) } else { "" };
+                let significand = first_char + "." + rest;
+                let exp_val = exp - 1;
+                let exp_str = if exp_val >= 0 { "e+" + exp_val.to_string } else { "e" + exp_val.to_string };
+                sign + significand + exp_str
+            }
+        }
+    );
+
+    // Convert an MPFR value to string with specified precision (digits after decimal point).
+    // 
+    // The output format is standard decimal notation with exactly `prec` digits after
+    // the decimal point (e.g., "3.14", "-123.456").
+    // 
+    // # Parameters
+    // - `prec`: The number of digits after the decimal point.
+    // - `num`: The MPFR number to convert.
+    to_string_precision : U8 -> MPFR -> String;
+    to_string_precision = |prec, num| (
+        let (mantissa, exp) = num.get_str(10, 0, RoundMode::rndn());
+        
+        // Handle special values (check if contains '@')
+        if mantissa.get_bytes.pop_back.to_iter.check_any(|c| c == '@') {
+            mantissa
+        } else {
+            // Handle sign
+            let (sign, mantissa) = if mantissa.starts_with("-") {
+                ("-", get_sub(1, @size(mantissa), mantissa))
+            } else {
+                ("", mantissa)
+            };
+            
+            // Handle zero
+            let is_zero = mantissa == "" || mantissa.get_bytes.pop_back.to_iter.check_all(|c| c == '0');
+            if is_zero {
+                let zeros = Array::fill(prec.i64, "0").to_iter.fold("", |s, acc| acc + s);
+                sign + "0." + zeros
+            } else {
+                let mantissa_len = @size(mantissa);
+                
+                // Determine where the decimal point should be
+                if exp > 0 {
+                    // Positive exponent: integer part exists
+                    if exp >= mantissa_len {
+                        // Number is an integer or larger
+                        // Pad with zeros if needed
+                        let int_zeros = Array::fill((exp - mantissa_len).i64, "0").to_iter.fold("", |s, acc| acc + s);
+                        let frac_zeros = Array::fill(prec.i64, "0").to_iter.fold("", |s, acc| acc + s);
+                        sign + mantissa + int_zeros + "." + frac_zeros
+                    } else {
+                        // Decimal point is within mantissa
+                        let int_part = get_sub(0, exp, mantissa);
+                        let frac_part = get_sub(exp, mantissa_len, mantissa);
+                        let frac_len = @size(frac_part);
+                        let frac_part_adjusted = if frac_len < prec.i64 {
+                            // Pad fractional part
+                            let pad_count = prec.i64 - frac_len;
+                            let zeros = Array::fill(pad_count, "0").to_iter.fold("", |s, acc| acc + s);
+                            frac_part + zeros
+                        } else if frac_len > prec.i64 {
+                            // Truncate fractional part
+                            get_sub(0, prec.i64, frac_part)
+                        } else {
+                            frac_part
+                        };
+                        sign + int_part + "." + frac_part_adjusted
+                    }
+                } else {
+                    // Non-positive exponent: starts with 0.
+                    let leading_zeros_count = (-exp).i64;
+                    let total_frac_digits = leading_zeros_count + mantissa_len;
+                    
+                    if total_frac_digits <= prec.i64 {
+                        // Pad to reach prec digits
+                        let leading_zeros = Array::fill(leading_zeros_count, "0").to_iter.fold("", |s, acc| acc + s);
+                        let trailing_zeros_count = prec.i64 - total_frac_digits;
+                        let trailing_zeros = Array::fill(trailing_zeros_count, "0").to_iter.fold("", |s, acc| acc + s);
+                        sign + "0." + leading_zeros + mantissa + trailing_zeros
+                    } else {
+                        // Truncate mantissa
+                        let available_for_mantissa = prec.i64 - leading_zeros_count;
+                        let mantissa_part = if available_for_mantissa > 0 {
+                            get_sub(0, available_for_mantissa, mantissa)
+                        } else {
+                            ""
+                        };
+                        let leading_zeros = Array::fill(leading_zeros_count, "0").to_iter.fold("", |s, acc| acc + s);
+                        sign + "0." + leading_zeros + mantissa_part
+                    }
+                }
+            }
+        }
+    );
+
     // Convert an MPFR value to a readable string with specified number of digits in base 10.
     // 
     // The output format is similar to standard floating-point notation (e.g., "3.14159", "-1.23e-10").
@@ -353,8 +543,8 @@ namespace MPFR {
     // # Parameters
     // - `n_digits`: Number of significant digits (0 means use get_str_ndigits with the number's precision).
     // - `num`: The MPFR number to convert.
-    to_string_with_digits : I64 -> MPFR -> String;
-    to_string_with_digits = |n_digits, num| (
+    to_string_digits : I64 -> MPFR -> String;
+    to_string_digits = |n_digits, num| (
         let (mantissa, exp) = num.get_str(10, n_digits, RoundMode::rndn());
         
         // Handle special values (check if contains '@')
@@ -393,7 +583,7 @@ namespace MPFR {
             sign + get_sub(0, exp, mantissa) + "." + get_sub(exp, len, mantissa)
         } else if exp <= 0 {
             // Small number with leading zeros (e.g., "314" with exp=-2 -> "0.00314")
-            let zeros = Array::fill((-exp).i64, '0').to_iter.fold("", |c, acc| acc + c.to_string);
+            let zeros = Array::fill((-exp).i64, "0").to_iter.fold("", |s, acc| acc + s);
             sign + "0." + zeros + mantissa
         } else {
             // Use scientific notation for large exponents
@@ -1758,5 +1948,5 @@ impl MPFR : LessThanOrEq {
 }
 
 impl MPFR : ToString {
-    to_string = to_string_with_digits(0);
+    to_string = to_string_digits(0);
 }

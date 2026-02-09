@@ -1,6 +1,6 @@
 # MPFR
 
-Defined in mpfr-fix@0.1.0
+Defined in mpfr-fix@0.2.0
 
 Provides arbitrary-precision floating-point type `MPFR` and related functions.
 
@@ -490,6 +490,41 @@ Rounds toward zero. Returns none if the value doesn't fit in I64.
 
 - `x`: The MPFR number to convert.
 
+#### get_str
+
+Type: `Std::I64 -> Std::I64 -> MPFR::RoundMode -> MPFR::MPFR -> (Std::String, Std::I64)`
+
+Convert an MPFR value to a string in a given base with specified number of digits.
+
+Returns a tuple of (mantissa_string, exponent) where the mantissa is a fraction
+with an implicit radix point immediately to the left of the first digit.
+For example, the number -3.1416 would be returned as ("-31416", 1).
+
+If the number is NaN, returns ("@NaN@", 0).
+If the number is +Inf, returns ("@Inf@", 0).
+If the number is -Inf, returns ("-@Inf@", 0).
+
+##### Parameters
+
+- `base`: The base of the string representation (must be in the range [2, 62] or [-36, -2]).
+- `n_digits`: Number of significant digits (0 means use get_str_ndigits with the number's precision).
+- `rnd`: The rounding mode to use.
+- `num`: The MPFR number to convert.
+
+#### get_str_ndigits
+
+Type: `Std::I64 -> MPFR::Precision -> Std::I64`
+
+Get the number of digits required to represent an MPFR value in a given base.
+
+This function returns the minimal integer m such that any number of p bits,
+when output in base b with m digits, can be recovered exactly when read back in base b.
+
+##### Parameters
+
+- `base`: The base (must be in the range [2, 62]).
+- `prec`: The precision in bits.
+
 #### get_ui
 
 Type: `MPFR::MPFR -> Std::Option Std::U64`
@@ -690,17 +725,6 @@ Return the minimum of two MPFR numbers.
 
 #### mpfr
 
-Type: `MPFR::Precision -> Std::I64 -> MPFR::MPFR`
-
-Create an MPFR value from an I64 with specified precision.
-
-##### Parameters
-
-- `prec`: The precision in bits.
-- `val`: The I64 value to convert.
-
-#### mpfr_f64
-
 Type: `MPFR::Precision -> Std::F64 -> MPFR::MPFR`
 
 Create an MPFR value from an F64 with specified precision.
@@ -709,6 +733,17 @@ Create an MPFR value from an F64 with specified precision.
 
 - `prec`: The precision in bits.
 - `val`: The F64 value to convert.
+
+#### mpfr_i
+
+Type: `MPFR::Precision -> Std::I64 -> MPFR::MPFR`
+
+Create an MPFR value from an I64 with specified precision.
+
+##### Parameters
+
+- `prec`: The precision in bits.
+- `val`: The I64 value to convert.
 
 #### mpfr_str
 
@@ -1026,6 +1061,60 @@ Hyperbolic tangent function.
 ##### Parameters
 
 - `x`: The value.
+
+#### to_string_digits
+
+Type: `Std::I64 -> MPFR::MPFR -> Std::String`
+
+Convert an MPFR value to a readable string with specified number of digits in base 10.
+
+The output format is similar to standard floating-point notation (e.g., "3.14159", "-1.23e-10").
+
+##### Parameters
+
+- `n_digits`: Number of significant digits (0 means use get_str_ndigits with the number's precision).
+- `num`: The MPFR number to convert.
+
+#### to_string_exp
+
+Type: `MPFR::MPFR -> Std::String`
+
+Convert an MPFR value to exponential form string.
+
+The output format is "d.dddd...e±exp" (e.g., "3.14159e+0", "-1.23456e-10").
+The number of significant digits is determined by the number's precision.
+
+##### Parameters
+
+- `num`: The MPFR number to convert.
+
+#### to_string_exp_precision
+
+Type: `Std::U8 -> MPFR::MPFR -> Std::String`
+
+Convert an MPFR value to exponential form string with specified precision.
+
+The output format is "d.{prec digits}e±exp" where the number of digits after
+the decimal point is exactly `prec`.
+
+##### Parameters
+
+- `prec`: The number of digits after the decimal point.
+- `num`: The MPFR number to convert.
+
+#### to_string_precision
+
+Type: `Std::U8 -> MPFR::MPFR -> Std::String`
+
+Convert an MPFR value to string with specified precision (digits after decimal point).
+
+The output format is standard decimal notation with exactly `prec` digits after
+the decimal point (e.g., "3.14", "-123.456").
+
+##### Parameters
+
+- `prec`: The number of digits after the decimal point.
+- `num`: The MPFR number to convert.
 
 #### trunc
 
