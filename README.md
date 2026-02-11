@@ -86,3 +86,4 @@ main = (
 - [MPFR Homepage](https://www.mpfr.org/)
 - [MPFR Documentation](https://www.mpfr.org/mpfr-current/mpfr.html)
 - [Fix Language](https://github.com/tttmmmyyyy/fixlang)
+- [GMP Wrapper (MPZ/MPQ) for Fix](https://github.com/tttmmmyyyy/fixlang-gmp) - Provides wrappers for GMP integer and rational number types
