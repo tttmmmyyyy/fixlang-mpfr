@@ -1,6 +1,6 @@
 # MPFR
 
-Defined in mpfr-fix@0.2.0
+Defined in mpfr-fix@0.3.0
 
 Provides arbitrary-precision floating-point type `MPFR` and related functions.
 
@@ -1061,19 +1061,6 @@ Hyperbolic tangent function.
 ##### Parameters
 
 - `x`: The value.
-
-#### to_string_digits
-
-Type: `Std::I64 -> MPFR::MPFR -> Std::String`
-
-Convert an MPFR value to a readable string with specified number of digits in base 10.
-
-The output format is similar to standard floating-point notation (e.g., "3.14159", "-1.23e-10").
-
-##### Parameters
-
-- `n_digits`: Number of significant digits (0 means use get_str_ndigits with the number's precision).
-- `num`: The MPFR number to convert.
 
 #### to_string_exp
 
