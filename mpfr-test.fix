@@ -7,7 +7,7 @@ import MPFR::MPFR::{
     floor, fma, fmod, gamma, get_f64, get_prec, get_si, get_str, get_str_ndigits, get_ui, hypot, inf, 
     is_inf, is_nan, is_number, is_zero, j0, j1, lngamma, log, log10, log1p, log2, max, min, mpfr, mpfr_i, 
     mpfr_str, mpfr_ui, mul_2ui, nan, neg_inf, pow, pow_ui, rootn_ui, round, sec, sech, sgn, signbit, sin, 
-    sinh, sqr, sqrt, sub, tanh, to_string_digits, to_string_exp, to_string_exp_precision, to_string_precision, trunc, zero, zeta_ui
+    sinh, sqr, sqrt, sub, tanh, to_string_exp, to_string_exp_precision, to_string_precision, trunc, zero, zeta_ui
 };
 import MPFR::RoundMode::{rndn};
 import Std::{F64, IO, U8, Array::{pop_back, to_iter}, Debug::{assert, assert_eq}, F64::abs, IO::println, Iterator::check_any, Monad::pure, Option::{as_some, is_none, is_some}, String::{get_bytes, starts_with}, ToString::to_string};
@@ -212,47 +212,47 @@ test_string_output = (
     assert(|_|"3.14159 mantissa with 10 digits", y_m == "3141590000");;
     assert(|_|"3.14159 exponent", y_e == 1);;
     
-    // Test to_string_digits with specific values
+    // Test to_string with specific values (shows full precision)
     let z1 = MPFR::mpfr(113, 3.14159);
-    let z1_str = z1.to_string_digits(5);
-    assert(|_|"3.14159 formatted with 5 digits", z1_str == "3.1416");;
+    let z1_str = z1.to_string;
+    assert(|_|"3.14159 formatted", z1_str == "3.14158999999999988261834005243144929");;
     
     // Test integer formatting
     let z2 = MPFR::mpfr_i(113, 42);
-    let z2_str = z2.to_string_digits(0);
+    let z2_str = z2.to_string;
     assert(|_|"integer 42 formatted", z2_str == "42");;
     
     // Test large number
     let z3 = MPFR::mpfr_i(113, 12345);
-    let z3_str = z3.to_string_digits(0);
+    let z3_str = z3.to_string;
     assert(|_|"integer 12345 formatted", z3_str == "12345");;
     
     // Test small number
     let z4 = MPFR::mpfr(113, 0.001);
-    let z4_str = z4.to_string_digits(5);
-    assert(|_|"0.001 formatted with 5 digits", z4_str == "0.001");;
+    let z4_str = z4.to_string;
+    assert(|_|"0.001 formatted", z4_str == "0.00100000000000000002081668171172168513");;
     
     // Test with zero
     let zero = MPFR::zero(53);
-    let zero_str = zero.to_string_digits(0);
+    let zero_str = zero.to_string;
     assert(|_|"zero formatted", zero_str == "0");;
     
-    // Test ToString trait with new implementation
+    // Test ToString trait
     let w = MPFR::mpfr(113, 2.718281828);
     let w_str = w.to_string;
     assert(|_|"e formatted with default precision", w_str == "2.71828182799999984453620527347084135");;
     
-    // Test special values
+    // Test special values with to_string
     let nan_val = MPFR::nan(53);
-    let nan_str = nan_val.to_string_digits(0);
+    let nan_str = nan_val.to_string;
     assert(|_|"nan formatted", nan_str == "@NaN@");;
     
     let inf_val = MPFR::inf(53);
-    let inf_str = inf_val.to_string_digits(0);
+    let inf_str = inf_val.to_string;
     assert(|_|"inf formatted", inf_str == "@Inf@");;
     
     let neg_inf_val = MPFR::neg_inf(53);
-    let neg_inf_str = neg_inf_val.to_string_digits(0);
+    let neg_inf_str = neg_inf_val.to_string;
     assert(|_|"neg_inf formatted", neg_inf_str == "-@Inf@");;
     
     pure()

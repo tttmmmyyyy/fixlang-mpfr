@@ -536,64 +536,6 @@ namespace MPFR {
         }
     );
 
-    // Convert an MPFR value to a readable string with specified number of digits in base 10.
-    // 
-    // The output format is similar to standard floating-point notation (e.g., "3.14159", "-1.23e-10").
-    // 
-    // # Parameters
-    // - `n_digits`: Number of significant digits (0 means use get_str_ndigits with the number's precision).
-    // - `num`: The MPFR number to convert.
-    to_string_digits : I64 -> MPFR -> String;
-    to_string_digits = |n_digits, num| (
-        let (mantissa, exp) = num.get_str(10, n_digits, RoundMode::rndn());
-        
-        // Handle special values (check if contains '@')
-        if mantissa.get_bytes.pop_back.to_iter.check_any(|c| c == '@') {
-            mantissa
-        };
-        
-        // Handle sign
-        let (sign, mantissa) = if mantissa.starts_with("-") {
-            ("-", get_sub(1, @size(mantissa), mantissa))
-        } else {
-            ("", mantissa)
-        };
-        
-        // Handle zero - check if mantissa is empty or all zeros
-        let is_zero = mantissa == "" || mantissa.get_bytes.pop_back.to_iter.check_all(|c| c == '0');
-        if is_zero {
-            sign + "0"
-        };
-        
-        // Remove trailing zeros from mantissa
-        let mantissa = mantissa.strip_last_bytes(|c| c == '0');
-        let len = @size(mantissa);
-        
-        // If mantissa became empty after removing zeros, it was all zeros
-        if len == 0 {
-            sign + "0"
-        };
-        
-        // Format based on exponent
-        if exp == len + 1 || exp == len {
-            // Integer without decimal point (e.g., "314" with exp=3 -> "314")
-            sign + mantissa
-        } else if exp >= 1 && exp < len {
-            // Insert decimal point within the mantissa (e.g., "314" with exp=1 -> "3.14")
-            sign + get_sub(0, exp, mantissa) + "." + get_sub(exp, len, mantissa)
-        } else if exp <= 0 {
-            // Small number with leading zeros (e.g., "314" with exp=-2 -> "0.00314")
-            let zeros = Array::fill((-exp).i64, "0").to_iter.fold("", |s, acc| acc + s);
-            sign + "0." + zeros + mantissa
-        } else {
-            // Use scientific notation for large exponents
-            let first_char = if @size(mantissa) > 0 { get_sub(0, 1, mantissa) } else { "" };
-            let rest = if @size(mantissa) > 1 { get_sub(1, len, mantissa) } else { "" };
-            let significand = first_char + "." + rest;
-            sign + significand + "e" + (exp - 1).to_string
-        }
-    );
-
     // Arithmetic operations
 
     // Add two MPFR numbers.
@@ -1948,5 +1890,53 @@ impl MPFR : LessThanOrEq {
 }
 
 impl MPFR : ToString {
-    to_string = to_string_digits(0);
+    to_string = |num| (
+        let (mantissa, exp) = num.get_str(10, 0, RoundMode::rndn());
+        
+        // Handle special values (check if contains '@')
+        if mantissa.get_bytes.pop_back.to_iter.check_any(|c| c == '@') {
+            mantissa
+        } else {
+            // Handle sign
+            let (sign, mantissa) = if mantissa.starts_with("-") {
+                ("-", get_sub(1, @size(mantissa), mantissa))
+            } else {
+                ("", mantissa)
+            };
+            
+            // Handle zero - check if mantissa is empty or all zeros
+            let is_zero = mantissa == "" || mantissa.get_bytes.pop_back.to_iter.check_all(|c| c == '0');
+            if is_zero {
+                sign + "0"
+            } else {
+                // Remove trailing zeros from mantissa
+                let mantissa = mantissa.strip_last_bytes(|c| c == '0');
+                let len = @size(mantissa);
+                
+                // If mantissa became empty after removing zeros, it was all zeros
+                if len == 0 {
+                    sign + "0"
+                } else {
+                    // Format based on exponent
+                    if exp == len + 1 || exp == len {
+                        // Integer without decimal point (e.g., "314" with exp=3 -> "314")
+                        sign + mantissa
+                    } else if exp >= 1 && exp < len {
+                        // Insert decimal point within the mantissa (e.g., "314" with exp=1 -> "3.14")
+                        sign + get_sub(0, exp, mantissa) + "." + get_sub(exp, len, mantissa)
+                    } else if exp <= 0 {
+                        // Small number with leading zeros (e.g., "314" with exp=-2 -> "0.00314")
+                        let zeros = Array::fill((-exp).i64, "0").to_iter.fold("", |s, acc| acc + s);
+                        sign + "0." + zeros + mantissa
+                    } else {
+                        // Use scientific notation for large exponents
+                        let first_char = if @size(mantissa) > 0 { get_sub(0, 1, mantissa) } else { "" };
+                        let rest = if @size(mantissa) > 1 { get_sub(1, len, mantissa) } else { "" };
+                        let significand = first_char + "." + rest;
+                        sign + significand + "e" + (exp - 1).to_string
+                    }
+                }
+            }
+        }
+    );
 }
