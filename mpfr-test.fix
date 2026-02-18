@@ -1,16 +1,22 @@
 // Tests for MPFR module
 module Test;
 
-import MPFR::MPFR::{
-    abs, add, asin, asinh, atan2, cbrt, ceil, cmp, const_catalan, const_euler, const_log2, const_pi, 
-    copysign, cos, cosh, digamma, div, div_2si, div_2ui, erf, erfc, exp, exp10, exp2, expm1, fac_ui, 
-    floor, fma, fmod, gamma, get_f64, get_prec, get_si, get_str, get_str_ndigits, get_ui, hypot, inf, 
-    is_inf, is_nan, is_number, is_zero, j0, j1, lngamma, log, log10, log1p, log2, max, min, mpfr, mpfr_i, 
-    mpfr_str, mpfr_ui, mul_2ui, nan, neg_inf, pow, pow_ui, rootn_ui, round, sec, sech, sgn, signbit, sin, 
-    sinh, sqr, sqrt, sub, tanh, to_string_digits, to_string_exp, to_string_exp_digits, to_string_exp_precision, to_string_precision, trunc, zero, zeta_ui
+import MPFR::{
+    MPFR::{
+        abs, add, asin, asinh, atan2, cbrt, ceil, cmp, const_catalan, const_euler, const_log2, const_pi, 
+        copysign, cos, cosh, digamma, div, div_2si, div_2ui, erf, erfc, exp, exp10, exp2, expm1, fac_ui, 
+        floor, fma, fmod, gamma, get_f64, get_prec, get_si, get_str, get_str_ndigits, get_ui, hypot, inf, 
+        is_inf, is_nan, is_number, is_zero, j0, j1, lngamma, log, log10, log1p, log2, max, min, mpfr, mpfr_i, 
+        mpfr_str, mpfr_ui, mul_2ui, nan, neg_inf, pow, pow_ui, rootn_ui, round, sec, sech, sgn, signbit, sin, 
+        sinh, sqr, sqrt, sub, tanh, to_string_digits, to_string_exp, to_string_exp_digits, 
+        to_string_exp_precision, to_string_precision, trunc, zero, zeta_ui
+    }, 
+    RoundMode::rndn
 };
-import MPFR::RoundMode::{rndn};
-import Std::{F64, IO, Array::{pop_back, to_iter}, Debug::{assert, assert_eq}, F64::abs, IO::println, Iterator::check_any, Monad::pure, Option::{as_some, is_none, is_some}, String::{get_bytes, starts_with, to_iter_bytes}, ToString::to_string};
+import Std::{
+    F64, IO, Debug::{assert, assert_eq}, F64::abs, Iterator::check_any, Monad::pure, 
+    Option::{as_some, is_none, is_some}, String::{starts_with, to_iter_bytes}, ToString::to_string
+};
 
 test_basic_construction : IO ();
 test_basic_construction = (

@@ -4,17 +4,13 @@
 module MPFR;
 
 import Std::{
-    undefined, unsafe_is_unique, Add, Array, Bool, Box, Div, Eq, F64, I64, IO, LessThan, LessThanOrEq, 
-    Mul, Neg, Option, Ptr, String, Sub, ToString, U64, Zero, Array::{fill, pop_back, to_iter}, 
-    Box::{@value, make}, Debug::debug_println, 
+    undefined, unsafe_is_unique, Add, Bool, Div, Eq, F64, I64, IO, LessThan, LessThanOrEq, Mul, Neg, 
+    Option, Ptr, String, Sub, ToString, U64, Zero, Array::{fill, to_iter}, Box::{make, @value}, 
     FFI::{mutate_boxed, CInt, Destructor, Destructor::{borrow, make, mutate_unique}}, IO::unsafe_perform, 
     Iterator::{check_all, check_any, fold}, LessThan::max, Monad::pure, Option::{none, some}, 
-    String::{
-        @size, borrow_c_str, get_bytes, get_sub, starts_with, strip_last_bytes, to_iter_bytes, 
-        unsafe_from_c_str_ptr_io
-    }, 
+    String::{borrow_c_str, get_sub, starts_with, strip_last_bytes, to_iter_bytes, unsafe_from_c_str_ptr_io, @size}, 
     ToCInt::c_int, ToCLong::c_long, ToCUnsignedLong::c_unsigned_long, ToI64::i64, ToString::to_string, 
-    ToU64::u64, Tuple2::@0
+    Tuple2::@0
 };
 
 // Precision type for MPFR numbers (in bits).
