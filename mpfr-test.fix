@@ -7,7 +7,7 @@ import MPFR::MPFR::{
     floor, fma, fmod, gamma, get_f64, get_prec, get_si, get_str, get_str_ndigits, get_ui, hypot, inf, 
     is_inf, is_nan, is_number, is_zero, j0, j1, lngamma, log, log10, log1p, log2, max, min, mpfr, mpfr_i, 
     mpfr_str, mpfr_ui, mul_2ui, nan, neg_inf, pow, pow_ui, rootn_ui, round, sec, sech, sgn, signbit, sin, 
-    sinh, sqr, sqrt, sub, tanh, to_string_exp, to_string_exp_precision, to_string_precision, trunc, zero, zeta_ui
+    sinh, sqr, sqrt, sub, tanh, to_string_digits, to_string_exp, to_string_exp_digits, to_string_exp_precision, to_string_precision, trunc, zero, zeta_ui
 };
 import MPFR::RoundMode::{rndn};
 import Std::{F64, IO, U8, Array::{pop_back, to_iter}, Debug::{assert, assert_eq}, F64::abs, IO::println, Iterator::check_any, Monad::pure, Option::{as_some, is_none, is_some}, String::{get_bytes, starts_with, to_iter_bytes}, ToString::to_string};
@@ -212,48 +212,9 @@ test_string_output = (
     assert(|_|"3.14159 mantissa with 10 digits", y_m == "3141590000");;
     assert(|_|"3.14159 exponent", y_e == 1);;
     
-    // Test to_string with specific values (shows full precision)
+    // Test to_string (delegates to F64::to_string via get_f64)
     let z1 = MPFR::mpfr(113, 3.14159);
-    let z1_str = z1.to_string;
-    assert(|_|"3.14159 formatted", z1_str == "3.14158999999999988261834005243144929");;
-    
-    // Test integer formatting
-    let z2 = MPFR::mpfr_i(113, 42);
-    let z2_str = z2.to_string;
-    assert(|_|"integer 42 formatted", z2_str == "42");;
-    
-    // Test large number
-    let z3 = MPFR::mpfr_i(113, 12345);
-    let z3_str = z3.to_string;
-    assert(|_|"integer 12345 formatted", z3_str == "12345");;
-    
-    // Test small number
-    let z4 = MPFR::mpfr(113, 0.001);
-    let z4_str = z4.to_string;
-    assert(|_|"0.001 formatted", z4_str == "0.00100000000000000002081668171172168513");;
-    
-    // Test with zero
-    let zero = MPFR::zero(53);
-    let zero_str = zero.to_string;
-    assert(|_|"zero formatted", zero_str == "0");;
-    
-    // Test ToString trait
-    let w = MPFR::mpfr(113, 2.718281828);
-    let w_str = w.to_string;
-    assert(|_|"e formatted with default precision", w_str == "2.71828182799999984453620527347084135");;
-    
-    // Test special values with to_string
-    let nan_val = MPFR::nan(53);
-    let nan_str = nan_val.to_string;
-    assert(|_|"nan formatted", nan_str == "@NaN@");;
-    
-    let inf_val = MPFR::inf(53);
-    let inf_str = inf_val.to_string;
-    assert(|_|"inf formatted", inf_str == "@Inf@");;
-    
-    let neg_inf_val = MPFR::neg_inf(53);
-    let neg_inf_str = neg_inf_val.to_string;
-    assert(|_|"neg_inf formatted", neg_inf_str == "-@Inf@");;
+    assert(|_|"3.14159 formatted", z1.to_string == "3.141590");;
     
     pure()
 );
@@ -261,218 +222,383 @@ test_string_output = (
 test_string_formats : IO ();
 test_string_formats = (
     // ==== to_string_exp tests ====
-    
-    // Test to_string_exp with pi
+
+    // Test to_string_exp with pi (precision 113 bit)
     let pi = MPFR::const_pi(113);
     let pi_exp = pi.to_string_exp;
     assert(|_|"pi in exponential form starts with 3.1", pi_exp.starts_with("3.1"));;
     assert(|_|"pi in exponential form contains e", pi_exp.to_iter_bytes.check_any(|c| c == 'e'));;
-    
+    assert(|_|"pi exp ends with e+0", pi_exp.to_iter_bytes.check_any(|c| c == '+'));;
+
+    // Test 1.0 (edge case: integer, exp=1, single digit)
+    let one = MPFR::mpfr(113, 1.0);
+    assert(|_|"1.0 in exp format", one.to_string_exp == "1.0e+0");;
+
+    // Test 5.0 (another single-digit integer)
+    let five = MPFR::mpfr(113, 5.0);
+    assert(|_|"5.0 in exp format", five.to_string_exp == "5.0e+0");;
+
+    // Test 10.0 (exp=2)
+    let ten = MPFR::mpfr(113, 10.0);
+    assert(|_|"10.0 in exp format", ten.to_string_exp == "1.0e+1");;
+
+    // Test 100.0 (exp=3)
+    let hundred = MPFR::mpfr(113, 100.0);
+    assert(|_|"100.0 in exp format", hundred.to_string_exp == "1.0e+2");;
+
+    // Test 123.0 (three-digit integer)
+    let one_two_three = MPFR::mpfr(113, 123.0);
+    assert(|_|"123.0 in exp format", one_two_three.to_string_exp == "1.23e+2");;
+
     // Test negative numbers
     let neg = MPFR::mpfr(113, -3.14159);
     let neg_exp = neg.to_string_exp;
     assert(|_|"negative exp starts with -3.1", neg_exp.starts_with("-3.1"));;
-    
+
     // Test very large number
     let large = MPFR::mpfr(113, 1.23e100);
     let large_exp = large.to_string_exp;
+    assert(|_|"large number exp starts with 1.23", large_exp.starts_with("1.23"));;
     assert(|_|"large number exp contains e+", large_exp.to_iter_bytes.check_any(|c| c == '+'));;
-    
+
+    // Test very small positive number (exp < 0): 0.1 = 1.000...e-1
+    let pt1 = MPFR::mpfr(113, 0.1);
+    let pt1_exp = pt1.to_string_exp;
+    assert(|_|"0.1 exp starts with 1.", pt1_exp.starts_with("1."));;
+    assert(|_|"0.1 exp ends with e-1", pt1_exp.to_iter_bytes.check_any(|c| c == '-'));;
+
     // Test very small number
     let small = MPFR::mpfr(113, 1.23e-100);
     let small_exp = small.to_string_exp;
+    assert(|_|"small number exp starts with 1.23", small_exp.starts_with("1.23"));;
     assert(|_|"small number exp contains e-", small_exp.to_iter_bytes.check_any(|c| c == '-'));;
-    
-    // Test 1.0 (edge case)
-    let one = MPFR::mpfr(113, 1.0);
-    let one_exp = one.to_string_exp;
-    assert(|_|"1.0 in exp format", one_exp == "1.0e+0");;
-    
+
+    // Test negative zero (should produce "-0.0e+0")
+    let neg_zero = MPFR::mpfr(53, -0.0);
+    assert(|_|"neg zero exp format", neg_zero.to_string_exp == "-0.0e+0");;
+
     // ==== to_string_exp_precision tests ====
-    
+
     // Test basic case
     let x = MPFR::mpfr(113, 3.14159);
     let x_exp2 = x.to_string_exp_precision(2_U8);
     assert(|_|"3.14159 with exp precision 2", x_exp2 == "3.14e+0");;
-    
+
     let y = MPFR::mpfr(113, 123.456);
     let y_exp3 = y.to_string_exp_precision(3_U8);
     assert(|_|"123.456 with exp precision 3", y_exp3 == "1.235e+2");;
-    
+
     let z = MPFR::mpfr(113, 0.00123);
     let z_exp4 = z.to_string_exp_precision(4_U8);
     assert(|_|"0.00123 with exp precision 4 starts with 1.23", z_exp4.starts_with("1.23"));;
-    
+
+    // Test 1.0 (prec=3): "1.000e+0"
+    assert(|_|"1.0 exp prec 3", one.to_string_exp_precision(3_U8) == "1.000e+0");;
+
+    // Test 10.0 (prec=2): "1.00e+1"
+    assert(|_|"10.0 exp prec 2", ten.to_string_exp_precision(2_U8) == "1.00e+1");;
+
+    // Test 0.1 (prec=2): "1.00e-1"
+    assert(|_|"0.1 exp prec 2", pt1.to_string_exp_precision(2_U8) == "1.00e-1");;
+
+    // Test 0.01 (prec=2): "1.00e-2"
+    let pt01 = MPFR::mpfr(113, 0.01);
+    assert(|_|"0.01 exp prec 2", pt01.to_string_exp_precision(2_U8) == "1.00e-2");;
+
+    // Test 1.5e-10 (prec=2): "1.50e-10"
+    let small10 = MPFR::mpfr(113, 1.5e-10);
+    assert(|_|"1.5e-10 exp prec 2", small10.to_string_exp_precision(2_U8) == "1.50e-10");;
+
     // Test negative numbers
     let neg_x = MPFR::mpfr(113, -3.14159);
     let neg_x_exp2 = neg_x.to_string_exp_precision(2_U8);
     assert(|_|"negative with exp precision 2", neg_x_exp2 == "-3.14e+0");;
-    
-    // Test precision 0 (only integer part)
+
+    // Test precision 0 (integer part only)
     let p0 = MPFR::mpfr(113, 5.6789);
     let p0_exp = p0.to_string_exp_precision(0_U8);
-    assert(|_|"exp precision 0", p0_exp == "5.e+0" || p0_exp == "6.e+0");;  // May round
-    
+    assert(|_|"exp precision 0 rounds to 6", p0_exp == "6.e+0");;
+
+    // Test 1.0 prec=0: "1.e+0"
+    assert(|_|"1.0 exp prec 0", one.to_string_exp_precision(0_U8) == "1.e+0");;
+
     // Test large exponent
     let large_e = MPFR::mpfr(113, 1.5e50);
     let large_e_str = large_e.to_string_exp_precision(2_U8);
-    assert(|_|"large exp contains e+5", large_e_str.to_iter_bytes.check_any(|c| c == '+'));;
-    
+    assert(|_|"1.5e50 exp prec 2 is 1.50e+50", large_e_str == "1.50e+50");;
+
     // Test negative exponent
     let small_e = MPFR::mpfr(113, 1.5e-50);
     let small_e_str = small_e.to_string_exp_precision(2_U8);
-    assert(|_|"small exp contains e-", small_e_str.to_iter_bytes.check_any(|c| c == '-'));;
-    
+    assert(|_|"1.5e-50 exp prec 2 is 1.50e-50", small_e_str == "1.50e-50");;
+
+    // Test 0.001 prec=3: "1.000e-3"
+    let pt001 = MPFR::mpfr(113, 0.001);
+    assert(|_|"0.001 exp prec 3", pt001.to_string_exp_precision(3_U8) == "1.000e-3");;
+
+    // Test negative zero (prec=2): "-0.00e+0"
+    assert(|_|"neg zero exp prec 2", neg_zero.to_string_exp_precision(2_U8) == "-0.00e+0");;
+
     // ==== to_string_precision tests ====
-    
+
     // Test basic case
     let a = MPFR::mpfr(113, 3.14159);
     let a_prec2 = a.to_string_precision(2_U8);
     assert(|_|"3.14159 with precision 2", a_prec2 == "3.14");;
-    
+
     let b = MPFR::mpfr_i(113, 42);
     let b_prec3 = b.to_string_precision(3_U8);
     assert(|_|"42 with precision 3", b_prec3 == "42.000");;
-    
+
     let c = MPFR::mpfr(113, 0.5);
     let c_prec5 = c.to_string_precision(5_U8);
     assert(|_|"0.5 with precision 5", c_prec5 == "0.50000");;
-    
+
+    // Test 1.0 prec=3: "1.000"
+    assert(|_|"1.0 prec 3", one.to_string_precision(3_U8) == "1.000");;
+
+    // Test 10.0 prec=2: "10.00"
+    assert(|_|"10.0 prec 2", ten.to_string_precision(2_U8) == "10.00");;
+
+    // Test 100.0 prec=0: "100."
+    assert(|_|"100.0 prec 0", hundred.to_string_precision(0_U8) == "100.");;
+
+    // Test 123.0 prec=2: "123.00"
+    assert(|_|"123.0 prec 2", one_two_three.to_string_precision(2_U8) == "123.00");;
+
+    // Test 0.1 prec=2: "0.10"
+    assert(|_|"0.1 prec 2", pt1.to_string_precision(2_U8) == "0.10");;
+
+    // Test 0.01 prec=3: "0.010"
+    assert(|_|"0.01 prec 3", pt01.to_string_precision(3_U8) == "0.010");;
+
+    // Test 0.01 prec=1: "0.0" (too few digits to show the value)
+    assert(|_|"0.01 prec 1", pt01.to_string_precision(1_U8) == "0.0");;
+
     // Test negative numbers
     let neg_a = MPFR::mpfr(113, -3.14159);
     let neg_a_prec2 = neg_a.to_string_precision(2_U8);
     assert(|_|"negative with precision 2", neg_a_prec2 == "-3.14");;
-    
-    // Test precision 0 (no decimal point)
+
+    // Test precision 0 (no fractional part)
     let prec0 = MPFR::mpfr(113, 3.7);
     let prec0_str = prec0.to_string_precision(0_U8);
-    assert(|_|"precision 0", prec0_str == "3." || prec0_str == "4.");;  // May round
-    
+    assert(|_|"3.7 precision 0 has trailing dot", prec0_str == "3." || prec0_str == "4.");;
+
+    // Test 1.0 prec=0: "1."
+    assert(|_|"1.0 prec 0", one.to_string_precision(0_U8) == "1.");;
+
+    // Test 123.0 prec=0: "123."
+    assert(|_|"123.0 prec 0", one_two_three.to_string_precision(0_U8) == "123.");;
+
     // Test very small number with limited precision
     let tiny = MPFR::mpfr(113, 0.000123);
     let tiny_prec2 = tiny.to_string_precision(2_U8);
     assert(|_|"tiny number precision 2", tiny_prec2 == "0.00");;
-    
+
     let tiny_prec5 = tiny.to_string_precision(5_U8);
     assert(|_|"tiny number precision 5", tiny_prec5.starts_with("0.00012"));;
-    
+
     // Test large integer
     let big_int = MPFR::mpfr_i(113, 9999);
     let big_int_prec2 = big_int.to_string_precision(2_U8);
     assert(|_|"large int with precision 2", big_int_prec2 == "9999.00");;
-    
+
     // Test number requiring padding
     let pad = MPFR::mpfr(113, 7.0);
     let pad_prec4 = pad.to_string_precision(4_U8);
     assert(|_|"7.0 with precision 4", pad_prec4 == "7.0000");;
-    
-    // Test decimal point in middle
+
+    // Test decimal point in middle (12.34 in MPFR with prec 3)
     let mid = MPFR::mpfr(113, 12.34);
     let mid_prec3 = mid.to_string_precision(3_U8);
     assert(|_|"12.34 with precision 3", mid_prec3 == "12.339");;
-    
+
+    // Test negative zero prec=2: "-0.00"
+    assert(|_|"neg zero prec 2", neg_zero.to_string_precision(2_U8) == "-0.00");;
+
     // ==== Special values tests ====
-    
+
     let nan_val = MPFR::nan(53);
     assert(|_|"nan exp format", nan_val.to_string_exp == "@NaN@");;
     assert(|_|"nan exp precision format", nan_val.to_string_exp_precision(2_U8) == "@NaN@");;
     assert(|_|"nan precision format", nan_val.to_string_precision(2_U8) == "@NaN@");;
-    
+    assert(|_|"nan exp digits format", nan_val.to_string_exp_digits(2_U8) == "@NaN@");;
+    assert(|_|"nan digits format", nan_val.to_string_digits(2_U8) == "@NaN@");;
+
     let inf_val = MPFR::inf(53);
     assert(|_|"inf exp format", inf_val.to_string_exp == "@Inf@");;
     assert(|_|"inf exp precision format", inf_val.to_string_exp_precision(2_U8) == "@Inf@");;
     assert(|_|"inf precision format", inf_val.to_string_precision(2_U8) == "@Inf@");;
-    
+    assert(|_|"inf exp digits format", inf_val.to_string_exp_digits(2_U8) == "@Inf@");;
+    assert(|_|"inf digits format", inf_val.to_string_digits(2_U8) == "@Inf@");;
+
     let neg_inf_val = MPFR::neg_inf(53);
     assert(|_|"neg_inf exp format", neg_inf_val.to_string_exp == "-@Inf@");;
     assert(|_|"neg_inf exp precision format", neg_inf_val.to_string_exp_precision(2_U8) == "-@Inf@");;
     assert(|_|"neg_inf precision format", neg_inf_val.to_string_precision(2_U8) == "-@Inf@");;
-    
+    assert(|_|"neg_inf exp digits format", neg_inf_val.to_string_exp_digits(2_U8) == "-@Inf@");;
+    assert(|_|"neg_inf digits format", neg_inf_val.to_string_digits(2_U8) == "-@Inf@");;
+
     let zero = MPFR::zero(53);
     assert(|_|"zero exp format", zero.to_string_exp == "0.0e+0");;
     assert(|_|"zero exp precision 3", zero.to_string_exp_precision(3_U8) == "0.000e+0");;
+    assert(|_|"zero exp precision 1", zero.to_string_exp_precision(1_U8) == "0.0e+0");;
     assert(|_|"zero precision 4", zero.to_string_precision(4_U8) == "0.0000");;
-    
-    pure()
-);
+    assert(|_|"zero precision 0", zero.to_string_precision(0_U8) == "0.");;
+    assert(|_|"zero digits 1", zero.to_string_digits(1_U8) == "0");;
 
-// Comprehensive test for to_string edge cases
-test_string_to_string_edge_cases : IO ();
-test_string_to_string_edge_cases = (
-    // ==== Negative numbers ====
-    let neg1 = MPFR::mpfr(113, -42.0);
-    assert(|_|"negative integer", neg1.to_string == "-42");;
-    
-    let neg2 = MPFR::mpfr(113, -0.5);
-    assert(|_|"negative fraction", neg2.to_string.starts_with("-0.5"));;
-    
-    let neg3 = MPFR::mpfr(113, -0.001);
-    assert(|_|"negative small", neg3.to_string.starts_with("-0.001"));;
-    
-    // ==== Powers of 10 ====
-    let ten = MPFR::mpfr_i(113, 10);
-    assert(|_|"10", ten.to_string == "10");;
-    
-    let hundred = MPFR::mpfr_i(113, 100);
-    assert(|_|"100", hundred.to_string == "100");;
-    
-    let thousand = MPFR::mpfr_i(113, 1000);
-    assert(|_|"1000", thousand.to_string == "1000");;
-    
-    // ==== Decimal fractions ====
-    let tenth = MPFR::mpfr(113, 0.1);
-    assert(|_|"0.1 starts correctly", tenth.to_string.starts_with("0.1"));;
-    
-    let hundredth = MPFR::mpfr(113, 0.01);
-    assert(|_|"0.01 starts correctly", hundredth.to_string.starts_with("0.01"));;
-    
-    // ==== Numbers with trailing zeros (the original issue) ====
-    let fifty = MPFR::mpfr_i(113, 50);
-    assert(|_|"50 as integer", fifty.to_string == "50");;
-    
-    let five_point_zero = MPFR::mpfr(113, 5.0);
-    assert(|_|"5.0", five_point_zero.to_string == "5");;
-    
-    // ==== Very large numbers (should use scientific notation) ====
-    let huge = MPFR::mpfr(113, 1.23e100);
-    let huge_str = huge.to_string;
-    assert(|_|"huge number uses exp notation", huge_str.to_iter_bytes.check_any(|c| c == 'e'));;
-    
-    // ==== Very small numbers ====
-    let tiny = MPFR::mpfr(113, 1.23e-50);
-    let tiny_str = tiny.to_string;
-    assert(|_|"tiny number format", tiny_str.starts_with("0.") || tiny_str.to_iter_bytes.check_any(|c| c == 'e'));;
-    
-    // ==== Numbers close to 1 ====
-    let almost_one = MPFR::mpfr(113, 0.999999);
-    assert(|_|"0.999999 starts correctly", almost_one.to_string.starts_with("0.999"));;
-    
-    let just_over_one = MPFR::mpfr(113, 1.000001);
-    assert(|_|"1.000001 starts correctly", just_over_one.to_string.starts_with("1."));;
-    
-    // ==== Edge case: numbers where exp == len ====
-    let exp_eq_len = MPFR::mpfr(113, 9.0);
-    assert(|_|"9.0", exp_eq_len.to_string == "9");;
-    
-    // ==== Edge case: numbers where exp == len + 1 ====
-    let exp_eq_len_plus = MPFR::mpfr(113, 99.0);
-    assert(|_|"99.0", exp_eq_len_plus.to_string == "99");;
-    
-    // ==== Mixed: integer and fractional parts ====
-    let mixed1 = MPFR::mpfr(113, 123.456);
-    assert(|_|"123.456 has dot", mixed1.to_string.to_iter_bytes.check_any(|c| c == '.'));;
-    assert(|_|"123.456 starts with 123", mixed1.to_string.starts_with("123"));;
-    
-    let mixed2 = MPFR::mpfr(113, 1.5);
-    assert(|_|"1.5", mixed2.to_string.starts_with("1.5"));;
-    
-    // ==== Leading zeros after decimal point ====
-    let leading_zeros1 = MPFR::mpfr(113, 0.0001);
-    assert(|_|"0.0001 has leading zeros", leading_zeros1.to_string.starts_with("0.0001"));;
-    
-    let leading_zeros2 = MPFR::mpfr(113, 0.00000123);
-    assert(|_|"0.00000123 has many leading zeros", leading_zeros2.to_string.starts_with("0.0"));;
-    
+    // ==== to_string_exp_digits tests ====
+
+    // Test basic case
+    let d1 = MPFR::mpfr(113, 3.14159);
+    let d1_exp3 = d1.to_string_exp_digits(3_U8);
+    assert(|_|"3.14159 with exp digits 3", d1_exp3 == "3.14e+0");;
+
+    let d2 = MPFR::mpfr(113, 314.159);
+    let d2_exp3 = d2.to_string_exp_digits(3_U8);
+    assert(|_|"314.159 with exp digits 3", d2_exp3 == "3.14e+2");;
+
+    let d3 = MPFR::mpfr(113, 0.00314159);
+    let d3_exp4 = d3.to_string_exp_digits(4_U8);
+    assert(|_|"0.00314159 with exp digits 4", d3_exp4 == "3.142e-3");;
+
+    // Test 1.0 (digits=3): "1.00e+0"
+    assert(|_|"1.0 exp digits 3", one.to_string_exp_digits(3_U8) == "1.00e+0");;
+
+    // Test 10.0 (digits=2): "1.0e+1"
+    assert(|_|"10.0 exp digits 2", ten.to_string_exp_digits(2_U8) == "1.0e+1");;
+
+    // Test 0.1 (digits=2): "1.0e-1"
+    assert(|_|"0.1 exp digits 2", pt1.to_string_exp_digits(2_U8) == "1.0e-1");;
+
+    // Test 0.01 (digits=3): "1.00e-2"
+    assert(|_|"0.01 exp digits 3 is 1.00e-2", pt01.to_string_exp_digits(3_U8) == "1.00e-2");;
+
+    // Test 1.5e-10 (digits=3): "1.50e-10"
+    assert(|_|"1.5e-10 exp digits 3", small10.to_string_exp_digits(3_U8) == "1.50e-10");;
+
+    // Test negative numbers
+    let d4 = MPFR::mpfr(113, -123.456);
+    let d4_exp2 = d4.to_string_exp_digits(2_U8);
+    assert(|_|"negative with exp digits 2", d4_exp2 == "-1.2e+2");;
+
+    // Test 1 digit: 5.0 → "5.e+0"
+    let d5 = MPFR::mpfr(113, 5.0);
+    assert(|_|"5.0 exp digits 1", d5.to_string_exp_digits(1_U8) == "5.e+0");;
+
+    // Test 1 digit with rounding: 567.89 → "6.e+2" (rounds up) or "5.e+2"
+    let d5b = MPFR::mpfr(113, 567.89);
+    let d5b_exp1 = d5b.to_string_exp_digits(1_U8);
+    assert(|_|"567.89 exp digits 1", d5b_exp1 == "5.e+2" || d5b_exp1 == "6.e+2");;
+
+    // Test large exponent
+    let d6 = MPFR::mpfr(113, 1.23e50);
+    let d6_exp5 = d6.to_string_exp_digits(5_U8);
+    assert(|_|"1.23e50 exp digits 5 contains e+", d6_exp5.to_iter_bytes.check_any(|c| c == '+'));;
+    assert(|_|"1.23e50 exp digits 5 starts with 1.23", d6_exp5.starts_with("1.23"));;
+
+    // Test zero with digits
+    let zero_d = MPFR::zero(53);
+    assert(|_|"zero exp digits 3", zero_d.to_string_exp_digits(3_U8) == "0.00e+0");;
+    assert(|_|"zero exp digits 1", zero_d.to_string_exp_digits(1_U8) == "0.e+0");;
+    assert(|_|"zero exp digits 2", zero_d.to_string_exp_digits(2_U8) == "0.0e+0");;
+
+    // Test negative zero (digits=2): "-0.0e+0"
+    assert(|_|"neg zero exp digits 2", neg_zero.to_string_exp_digits(2_U8) == "-0.0e+0");;
+
+    // Test special values with exp_digits
+    assert(|_|"nan exp digits", nan_val.to_string_exp_digits(3_U8) == "@NaN@");;
+    assert(|_|"inf exp digits", inf_val.to_string_exp_digits(3_U8) == "@Inf@");;
+    assert(|_|"neg_inf exp digits", neg_inf_val.to_string_exp_digits(3_U8) == "-@Inf@");;
+
+    // ==== to_string_digits tests ====
+
+    // Test basic case
+    let e1 = MPFR::mpfr(113, 3.14159);
+    let e1_dig3 = e1.to_string_digits(3_U8);
+    assert(|_|"3.14159 with digits 3", e1_dig3 == "3.14");;
+
+    let e2 = MPFR::mpfr(113, 314.159);
+    let e2_dig3 = e2.to_string_digits(3_U8);
+    assert(|_|"314.159 with digits 3", e2_dig3 == "314");;
+
+    let e3 = MPFR::mpfr(113, 0.00314159);
+    let e3_dig3 = e3.to_string_digits(3_U8);
+    assert(|_|"0.00314159 with digits 3", e3_dig3 == "0.00314");;
+
+    // Test 1.0 (digits=3): "1.00"
+    assert(|_|"1.0 digits 3", one.to_string_digits(3_U8) == "1.00");;
+
+    // Test 1.0 (digits=1): "1"
+    assert(|_|"1.0 digits 1", one.to_string_digits(1_U8) == "1");;
+
+    // Test 10.0 (digits=3): "10.0"
+    assert(|_|"10.0 digits 3", ten.to_string_digits(3_U8) == "10.0");;
+
+    // Test 100.0 (digits=2): "100"
+    assert(|_|"100.0 digits 2", hundred.to_string_digits(2_U8) == "100");;
+
+    // Test 100.0 (digits=3): "100"
+    assert(|_|"100.0 digits 3", hundred.to_string_digits(3_U8) == "100");;
+
+    // Test 0.1 (digits=2): "0.10"
+    assert(|_|"0.1 digits 2", pt1.to_string_digits(2_U8) == "0.10");;
+
+    // Test 0.01 (digits=3): "0.0100"
+    assert(|_|"0.01 digits 3", pt01.to_string_digits(3_U8) == "0.0100");;
+
+    // Test negative numbers
+    let e4 = MPFR::mpfr(113, -123.456);
+    let e4_dig4 = e4.to_string_digits(4_U8);
+    assert(|_|"negative with digits 4", e4_dig4 == "-123.5");;
+
+    // Test 5.0 with 1 digit: "5"
+    assert(|_|"5.0 digits 1", d5.to_string_digits(1_U8) == "5");;
+
+    // Test 1 digit with rounding
+    let e5 = MPFR::mpfr(113, 5.678);
+    let e5_dig1 = e5.to_string_digits(1_U8);
+    assert(|_|"5.678 digits 1", e5_dig1 == "5" || e5_dig1 == "6");;
+
+    // Test large number (5 digits, rounds last digit)
+    let e6 = MPFR::mpfr(113, 123456.789);
+    let e6_dig5 = e6.to_string_digits(5_U8);
+    assert(|_|"123456.789 with digits 5", e6_dig5 == "123460");;
+
+    // Test small number
+    let e7 = MPFR::mpfr(113, 0.000123456);
+    let e7_dig5 = e7.to_string_digits(5_U8);
+    assert(|_|"0.000123456 with digits 5", e7_dig5.starts_with("0.00012"));;
+
+    // Test integer with fewer digits than integer length (rounds with trailing zeros)
+    let e8 = MPFR::mpfr_i(113, 123);
+    let e8_dig2 = e8.to_string_digits(2_U8);
+    assert(|_|"123 with digits 2", e8_dig2 == "120");;
+
+    // Test 9999 with digits=2: rounds up to 10000
+    let nine999 = MPFR::mpfr_i(113, 9999);
+    assert(|_|"9999 with digits 2", nine999.to_string_digits(2_U8) == "10000");;
+
+    // Test 9999 with digits=4: "9999"
+    assert(|_|"9999 with digits 4", nine999.to_string_digits(4_U8) == "9999");;
+
+    // Test 123.0 with digits=5: "123.00"
+    assert(|_|"123.0 digits 5", one_two_three.to_string_digits(5_U8) == "123.00");;
+
+    // Test zero with digits
+    let zero_e = MPFR::zero(53);
+    assert(|_|"zero digits 3", zero_e.to_string_digits(3_U8) == "0");;
+    assert(|_|"zero digits 1", zero_e.to_string_digits(1_U8) == "0");;
+
+    // Test negative zero digits=2: "-0"
+    assert(|_|"neg zero digits 2", neg_zero.to_string_digits(2_U8) == "-0");;
+
+    // Test special values with digits
+    assert(|_|"nan digits", nan_val.to_string_digits(3_U8) == "@NaN@");;
+    assert(|_|"inf digits", inf_val.to_string_digits(3_U8) == "@Inf@");;
+    assert(|_|"neg_inf digits", neg_inf_val.to_string_digits(3_U8) == "-@Inf@");;
+
     pure()
 );
 
@@ -854,7 +980,6 @@ test = (
     test_string_conversion;;
     test_string_output;;
     test_string_formats;;
-    test_string_to_string_edge_cases;;
     test_power_root;;
     test_exponential_logarithm;;
     test_trigonometric;;
