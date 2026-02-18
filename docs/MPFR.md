@@ -1,6 +1,6 @@
 # MPFR
 
-Defined in mpfr-fix@0.3.0
+Defined in mpfr-fix@0.4.0
 
 Provides arbitrary-precision floating-point type `MPFR` and related functions.
 
@@ -1062,6 +1062,20 @@ Hyperbolic tangent function.
 
 - `x`: The value.
 
+#### to_string_digits
+
+Type: `Std::I64 -> MPFR::MPFR -> Std::String`
+
+Convert an MPFR value to string with specified significant digits.
+
+The output format is standard decimal notation with exactly `digits` significant digits
+(e.g., "3.14", "-0.0012346").
+
+##### Parameters
+
+- `digits`: The number of significant digits.
+- `num`: The MPFR number to convert.
+
 #### to_string_exp
 
 Type: `MPFR::MPFR -> Std::String`
@@ -1075,9 +1089,23 @@ The number of significant digits is determined by the number's precision.
 
 - `num`: The MPFR number to convert.
 
+#### to_string_exp_digits
+
+Type: `Std::I64 -> MPFR::MPFR -> Std::String`
+
+Convert an MPFR value to exponential form string with specified significant digits.
+
+The output format is "d.ddd...e±exp" with exactly `digits` significant digits
+(e.g., "3.14e+0", "-1.23e+2").
+
+##### Parameters
+
+- `digits`: The number of significant digits.
+- `num`: The MPFR number to convert.
+
 #### to_string_exp_precision
 
-Type: `Std::U8 -> MPFR::MPFR -> Std::String`
+Type: `Std::I64 -> MPFR::MPFR -> Std::String`
 
 Convert an MPFR value to exponential form string with specified precision.
 
@@ -1091,7 +1119,7 @@ the decimal point is exactly `prec`.
 
 #### to_string_precision
 
-Type: `Std::U8 -> MPFR::MPFR -> Std::String`
+Type: `Std::I64 -> MPFR::MPFR -> Std::String`
 
 Convert an MPFR value to string with specified precision (digits after decimal point).
 

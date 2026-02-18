@@ -5,7 +5,7 @@ module MPFR;
 
 import Std::{
     undefined, unsafe_is_unique, Add, Array, Bool, Box, Div, Eq, F64, I64, IO, LessThan, LessThanOrEq, 
-    Mul, Neg, Option, Ptr, String, Sub, ToString, U64, U8, Zero, Array::{fill, pop_back, to_iter}, 
+    Mul, Neg, Option, Ptr, String, Sub, ToString, U64, Zero, Array::{fill, pop_back, to_iter}, 
     Box::{@value, make}, Debug::debug_println, 
     FFI::{mutate_boxed, CInt, Destructor, Destructor::{borrow, make, mutate_unique}}, IO::unsafe_perform, 
     Iterator::{check_all, check_any, fold}, LessThan::max, Monad::pure, Option::{none, some}, 
@@ -405,10 +405,10 @@ namespace MPFR {
     // # Parameters
     // - `prec`: The number of digits after the decimal point.
     // - `num`: The MPFR number to convert.
-    to_string_exp_precision : U8 -> MPFR -> String;
+    to_string_exp_precision : I64 -> MPFR -> String;
     to_string_exp_precision = |prec, num| (
         // Request prec+1 significant digits (1 for integer part, prec for fractional part)
-        let n_digits = prec.i64 + 1;
+        let n_digits = prec + 1;
         let (mantissa, exp) = num.get_str(10, n_digits, RoundMode::rndn());
         
         // Handle special values (check if contains '@')
@@ -425,7 +425,7 @@ namespace MPFR {
             // Handle zero
             let is_zero = mantissa == "" || mantissa.to_iter_bytes.check_all(|c| c == '0');
             if is_zero {
-                let zeros = Array::fill(prec.i64, "0").to_iter.fold("", |s, acc| acc + s);
+                let zeros = Array::fill(prec, "0").to_iter.fold("", |s, acc| acc + s);
                 sign + "0." + zeros + "e+0"
             } else {
                 let len = @size(mantissa);
@@ -462,9 +462,9 @@ namespace MPFR {
     // # Parameters
     // - `digits`: The number of significant digits.
     // - `num`: The MPFR number to convert.
-    to_string_exp_digits : U8 -> MPFR -> String;
+    to_string_exp_digits : I64 -> MPFR -> String;
     to_string_exp_digits = |digits, num| (
-        let n_digits = digits.i64;
+        let n_digits = digits;
         if n_digits < 1 {
             undefined("[MPFR::to_string_exp_digits] digits must be at least 1")
         };
@@ -484,8 +484,8 @@ namespace MPFR {
             // Handle zero
             let is_zero = mantissa == "" || mantissa.to_iter_bytes.check_all(|c| c == '0');
             if is_zero {
-                let zeros = if digits > 1_U8 { 
-                    Array::fill((digits - 1_U8).i64, "0").to_iter.fold("", |s, acc| acc + s) 
+                let zeros = if digits > 1 { 
+                    Array::fill(digits - 1, "0").to_iter.fold("", |s, acc| acc + s) 
                 } else { 
                     "" 
                 };
@@ -525,7 +525,7 @@ namespace MPFR {
     // # Parameters
     // - `prec`: The number of digits after the decimal point.
     // - `num`: The MPFR number to convert.
-    to_string_precision : U8 -> MPFR -> String;
+    to_string_precision : I64 -> MPFR -> String;
     to_string_precision = |prec, num| (
         let (mantissa, exp) = num.get_str(10, 0, RoundMode::rndn());
         
@@ -543,7 +543,7 @@ namespace MPFR {
             // Handle zero
             let is_zero = mantissa == "" || mantissa.to_iter_bytes.check_all(|c| c == '0');
             if is_zero {
-                let zeros = Array::fill(prec.i64, "0").to_iter.fold("", |s, acc| acc + s);
+                let zeros = Array::fill(prec, "0").to_iter.fold("", |s, acc| acc + s);
                 sign + "0." + zeros
             } else {
                 let mantissa_len = @size(mantissa);
@@ -555,21 +555,21 @@ namespace MPFR {
                         // Number is an integer or larger
                         // Pad with zeros if needed
                         let int_zeros = Array::fill((exp - mantissa_len).i64, "0").to_iter.fold("", |s, acc| acc + s);
-                        let frac_zeros = Array::fill(prec.i64, "0").to_iter.fold("", |s, acc| acc + s);
+                        let frac_zeros = Array::fill(prec, "0").to_iter.fold("", |s, acc| acc + s);
                         sign + mantissa + int_zeros + "." + frac_zeros
                     } else {
                         // Decimal point is within mantissa
                         let int_part = get_sub(0, exp, mantissa);
                         let frac_part = get_sub(exp, mantissa_len, mantissa);
                         let frac_len = @size(frac_part);
-                        let frac_part_adjusted = if frac_len < prec.i64 {
+                        let frac_part_adjusted = if frac_len < prec {
                             // Pad fractional part
-                            let pad_count = prec.i64 - frac_len;
+                            let pad_count = prec - frac_len;
                             let zeros = Array::fill(pad_count, "0").to_iter.fold("", |s, acc| acc + s);
                             frac_part + zeros
-                        } else if frac_len > prec.i64 {
+                        } else if frac_len > prec {
                             // Truncate fractional part
-                            get_sub(0, prec.i64, frac_part)
+                            get_sub(0, prec, frac_part)
                         } else {
                             frac_part
                         };
@@ -580,21 +580,21 @@ namespace MPFR {
                     let leading_zeros_count = (-exp).i64;
                     let total_frac_digits = leading_zeros_count + mantissa_len;
                     
-                    if total_frac_digits <= prec.i64 {
+                    if total_frac_digits <= prec {
                         // Pad to reach prec digits
                         let leading_zeros = Array::fill(leading_zeros_count, "0").to_iter.fold("", |s, acc| acc + s);
-                        let trailing_zeros_count = prec.i64 - total_frac_digits;
+                        let trailing_zeros_count = prec - total_frac_digits;
                         let trailing_zeros = Array::fill(trailing_zeros_count, "0").to_iter.fold("", |s, acc| acc + s);
                         sign + "0." + leading_zeros + mantissa + trailing_zeros
                     } else {
                         // Truncate mantissa or leading zeros
-                        if leading_zeros_count >= prec.i64 {
+                        if leading_zeros_count >= prec {
                             // All digits are leading zeros
-                            let leading_zeros = Array::fill(prec.i64, "0").to_iter.fold("", |s, acc| acc + s);
+                            let leading_zeros = Array::fill(prec, "0").to_iter.fold("", |s, acc| acc + s);
                             sign + "0." + leading_zeros
                         } else {
                             // Some mantissa digits fit
-                            let available_for_mantissa = prec.i64 - leading_zeros_count;
+                            let available_for_mantissa = prec - leading_zeros_count;
                             let mantissa_part = if available_for_mantissa > 0 {
                                 get_sub(0, available_for_mantissa, mantissa)
                             } else {
@@ -617,9 +617,9 @@ namespace MPFR {
     // # Parameters
     // - `digits`: The number of significant digits.
     // - `num`: The MPFR number to convert.
-    to_string_digits : U8 -> MPFR -> String;
+    to_string_digits : I64 -> MPFR -> String;
     to_string_digits = |digits, num| (
-        let n_digits = digits.i64;
+        let n_digits = digits;
         if n_digits < 1 {
             undefined("[MPFR::to_string_digits] digits must be at least 1")
         };
