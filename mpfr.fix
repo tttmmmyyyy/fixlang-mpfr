@@ -6,11 +6,12 @@ module MPFR;
 import Std::{
     undefined, unsafe_is_unique, Add, Bool, Div, Eq, F64, I64, IO, LessThan, LessThanOrEq, Mul, Neg, 
     Option, Ptr, String, Sub, ToString, U64, Zero, Array::{fill, to_iter}, Box::{make, @value}, 
-    FFI::{mutate_boxed, CInt, Destructor, Destructor::{borrow, make, mutate_unique}}, IO::unsafe_perform, 
-    Iterator::{check_all, check_any, fold}, LessThan::max, Monad::pure, Option::{none, some}, 
+    FFI::{mutate_boxed, CInt, CSizeT, Destructor, Destructor::{borrow, make, mutate_unique}}, 
+    IO::unsafe_perform, Iterator::{check_all, check_any, fold}, LessThan::max, Monad::pure, 
+    Option::{none, some}, 
     String::{borrow_c_str, get_sub, starts_with, strip_last_bytes, to_iter_bytes, unsafe_from_c_str_ptr_io, @size}, 
-    ToCInt::c_int, ToCLong::c_long, ToCUnsignedLong::c_unsigned_long, ToI64::i64, ToString::to_string, 
-    Tuple2::@0
+    ToCInt::c_int, ToCLong::c_long, ToCSizeT::c_size_t, ToCUnsignedLong::c_unsigned_long, ToI64::i64, 
+    ToString::to_string, Tuple2::@0
 };
 
 // Precision type for MPFR numbers (in bits).
@@ -21,8 +22,8 @@ type MPFRHandle = Ptr;
 
 // Size of `__mpfr_struct`.
 // On 64-bit systems, this is typically 32 bytes.
-c_SIZE_OF_MPFR : CInt;
-c_SIZE_OF_MPFR = 32.c_int;
+c_SIZE_OF_MPFR : CSizeT;
+c_SIZE_OF_MPFR = 32.c_size_t;
 
 // Rounding mode for MPFR operations.
 type RoundMode = unbox union {
@@ -51,7 +52,7 @@ namespace MPFRHandle {
     // Construct MPFRHandle by MPFR's initialization function with precision.
     _construct_by : Precision -> (MPFRHandle -> IO a) -> IO (MPFRHandle, a);
     _construct_by = |prec, ctor| (
-        let handle = *FFI_CALL_IO[Ptr malloc(CInt), c_SIZE_OF_MPFR];
+        let handle = *FFI_CALL_IO[Ptr malloc(CSizeT), c_SIZE_OF_MPFR];
         FFI_CALL_IO[() mpfr_init2(Ptr, CLong), handle, prec.c_long];;
         let res = *ctor(handle);
         pure $ (handle, res)
@@ -62,7 +63,7 @@ namespace MPFRHandle {
     _copy_constructor = |handle| (
         // Get precision of source
         let prec = FFI_CALL[CLong mpfr_get_prec(Ptr), handle];
-        let new_handle = *FFI_CALL_IO[Ptr malloc(CInt), c_SIZE_OF_MPFR];
+        let new_handle = *FFI_CALL_IO[Ptr malloc(CSizeT), c_SIZE_OF_MPFR];
         FFI_CALL_IO[() mpfr_init2(Ptr, CLong), new_handle, prec];;
         FFI_CALL_IO[CInt mpfr_set(Ptr, Ptr, CInt), new_handle, handle, RoundMode::rndn().to_c_rnd];;
         pure $ new_handle
