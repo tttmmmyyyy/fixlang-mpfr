@@ -4,7 +4,7 @@
 module MPFR;
 
 import Std::{
-    undefined, unsafe_is_unique, Add, Bool, Div, Eq, F64, I64, IO, LessThan, LessThanOrEq, Mul, Neg, 
+    undefined, unsafe_is_unique, Add, Bool, Div, Eq, F64, I64, IO, LessThan, LessThanOrEq, Mul, Neg, One, 
     Option, Ptr, String, Sub, ToString, U64, Zero, Array::{fill, to_iter}, Box::{make, @value}, 
     FFI::{mutate_boxed, CInt, CSizeT, Destructor, Destructor::{borrow, make, mutate_unique}}, 
     IO::unsafe_perform, Iterator::{check_all, check_any, fold}, LessThan::max, Monad::pure, 
@@ -203,13 +203,6 @@ namespace MPFR {
             Option::some $ num
         ))
     );
-
-    // Create an MPFR value representing zero.
-    // 
-    // # Parameters
-    // - `prec`: The precision in bits.
-    zero : Precision -> MPFR;
-    zero = |prec| mpfr_i(prec, 0);
 
     // Create an MPFR value representing NaN (Not a Number).
     // 
@@ -1996,7 +1989,11 @@ namespace MPFR {
 // Trait implementations
 
 impl MPFR : Zero {
-    zero = MPFR::zero(53);
+    zero = MPFR::mpfr_i(53, 0);
+}
+
+impl MPFR : One {
+    one = MPFR::mpfr_ui(53, 1_U64);
 }
 
 impl MPFR : Add {

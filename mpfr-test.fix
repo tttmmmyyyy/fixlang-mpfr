@@ -2,6 +2,7 @@
 module Test;
 
 import MPFR::{
+    MPFR, 
     MPFR::{
         abs, add, asin, asinh, atan2, cbrt, ceil, cmp, const_catalan, const_euler, const_log2, const_pi, 
         copysign, cos, cosh, digamma, div, div_2si, div_2ui, erf, erfc, exp, exp10, exp2, expm1, fac_ui, 
@@ -9,13 +10,14 @@ import MPFR::{
         is_inf, is_nan, is_number, is_zero, j0, j1, lngamma, log, log10, log1p, log2, max, min, mpfr, mpfr_i, 
         mpfr_str, mpfr_ui, mul_2ui, nan, neg_inf, pow, pow_ui, rootn_ui, round, sec, sech, sgn, signbit, sin, 
         sinh, sqr, sqrt, sub, tanh, to_string_digits, to_string_exp, to_string_exp_digits, 
-        to_string_exp_precision, to_string_precision, trunc, zero, zeta_ui
+        to_string_exp_precision, to_string_precision, trunc, zeta_ui
     }, 
     RoundMode::rndn
 };
 import Std::{
-    F64, IO, Debug::{assert, assert_eq}, F64::abs, Iterator::check_any, Monad::pure, 
-    Option::{as_some, is_none, is_some}, String::{starts_with, to_iter_bytes}, ToString::to_string
+    F64, IO, Debug::{assert, assert_eq}, F64::abs, Iterator::check_any, Monad::pure, One::one, 
+    Option::{as_some, is_none, is_some}, String::{starts_with, to_iter_bytes}, ToString::to_string, 
+    Zero::zero
 };
 
 test_basic_construction : IO ();
@@ -34,8 +36,11 @@ test_basic_construction = (
     assert(|_|"mpfr from F64", (z_f64 - 3.14159).abs < 0.00001);;
 
     // Test special values
-    let zero_val = MPFR::zero(53);
+    let zero_val : MPFR = zero;
     assert(|_|"zero is_zero", zero_val.is_zero);;
+
+    let one_val : MPFR = one;
+    assert_eq(|_|"one to_string", one_val.to_string, "1.000000");;
     
     let nan_val = MPFR::nan(53);
     assert(|_|"nan is_nan", nan_val.is_nan);;
@@ -132,7 +137,7 @@ test_special_values = (
     let normal = MPFR::mpfr_i(53, 42);
     let nan_val = MPFR::nan(53);
     let inf_val = MPFR::inf(53);
-    let zero_val = MPFR::zero(53);
+    let zero_val = MPFR::mpfr_i(53, 0);
 
     // Test predicates on normal value
     assert(|_|"normal.is_number", normal.is_number);;
@@ -446,7 +451,7 @@ test_string_formats = (
     assert(|_|"neg_inf exp digits format", neg_inf_val.to_string_exp_digits(2_I64) == "-@Inf@");;
     assert(|_|"neg_inf digits format", neg_inf_val.to_string_digits(2_I64) == "-@Inf@");;
 
-    let zero = MPFR::zero(53);
+    let zero = MPFR::mpfr_i(53, 0);
     assert(|_|"zero exp format", zero.to_string_exp == "0.0e+0");;
     assert(|_|"zero exp precision 3", zero.to_string_exp_precision(3_I64) == "0.000e+0");;
     assert(|_|"zero exp precision 1", zero.to_string_exp_precision(1_I64) == "0.0e+0");;
@@ -505,7 +510,7 @@ test_string_formats = (
     assert(|_|"1.23e50 exp digits 5 starts with 1.23", d6_exp5.starts_with("1.23"));;
 
     // Test zero with digits
-    let zero_d = MPFR::zero(53);
+    let zero_d = MPFR::mpfr_i(53, 0);
     assert(|_|"zero exp digits 3", zero_d.to_string_exp_digits(3_I64) == "0.00e+0");;
     assert(|_|"zero exp digits 1", zero_d.to_string_exp_digits(1_I64) == "0.e+0");;
     assert(|_|"zero exp digits 2", zero_d.to_string_exp_digits(2_I64) == "0.0e+0");;
@@ -593,7 +598,7 @@ test_string_formats = (
     assert(|_|"123.0 digits 5", one_two_three.to_string_digits(5_I64) == "123.00");;
 
     // Test zero with digits
-    let zero_e = MPFR::zero(53);
+    let zero_e = MPFR::mpfr_i(53, 0);
     assert(|_|"zero digits 3", zero_e.to_string_digits(3_I64) == "0");;
     assert(|_|"zero digits 1", zero_e.to_string_digits(1_I64) == "0");;
 

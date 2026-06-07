@@ -1,6 +1,6 @@
 # MPFR
 
-Defined in mpfr-fix@0.4.0
+Defined in mpfr-fix@0.6.0
 
 Provides arbitrary-precision floating-point type `MPFR` and related functions.
 
@@ -12,7 +12,7 @@ This is a wrapper for the GNU MPFR (Multiple Precision Floating-Point Reliable) 
 
 #### c_SIZE_OF_MPFR
 
-Type: `Std::FFI::CInt`
+Type: `Std::FFI::CSizeT`
 
 Size of `__mpfr_struct`.
 On 64-bit systems, this is typically 32 bytes.
@@ -1172,16 +1172,6 @@ Bessel function of the second kind of order n.
 - `n`: The order.
 - `x`: The value.
 
-#### zero
-
-Type: `MPFR::Precision -> MPFR::MPFR`
-
-Create an MPFR value representing zero.
-
-##### Parameters
-
-- `prec`: The precision in bits.
-
 #### zeta
 
 Type: `MPFR::MPFR -> MPFR::MPFR`
@@ -1220,10 +1210,6 @@ Convert RoundMode to C integer constant.
 Defined as: `type MPFR = unbox struct { ...fields... }`
 
 Arbitrary-precision floating-point number type.
-
-##### field `_0`
-
-Type: `Std::FFI::Destructor MPFR::MPFRHandle`
 
 #### MPFRHandle
 
@@ -1280,6 +1266,8 @@ Type: `()`
 ### impl `MPFR::MPFR : Std::Mul`
 
 ### impl `MPFR::MPFR : Std::Neg`
+
+### impl `MPFR::MPFR : Std::One`
 
 ### impl `MPFR::MPFR : Std::Sub`
 

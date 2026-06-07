@@ -50,7 +50,7 @@ let z = x + y;  // Uses RNDN rounding, precision is max(x.prec, y.prec)
 - **Rich mathematical functions**: Trigonometric, exponential, logarithmic, special functions, and more
 - **Type conversions**: Convert to/from I64, F64, String, MPZ, MPQ
 - **Functional style**: Immutable data structures with automatic memory management
-- **Trait implementations**: Zero, Add, Sub, Mul, Div, Neg, Eq, LessThan, ToString
+- **Trait implementations**: Zero, One, Add, Sub, Mul, Div, Neg, Eq, LessThan, ToString
 
 ## Usage Example
 
