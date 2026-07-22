@@ -106,7 +106,7 @@ namespace MPFR {
     // An MPFR value is unboxed, so its uniqueness is that of the boxed `Destructor` it holds, tested by
     // acting on the field with `unsafe_is_unique` (the `(Bool, _)` functor).
     _is_unique : MPFR -> (Bool, MPFR);
-    _is_unique = |num| num.act__0(|dtor| dtor.unsafe_is_unique);
+    _is_unique = |num| num.act__0(unsafe_is_unique);
 
     // Get the precision of an MPFR number.
     // 

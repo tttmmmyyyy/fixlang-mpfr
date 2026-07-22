@@ -16,4 +16,4 @@ memcheck = true
 [[dependencies]]
 name = "gmp-fix"
 version = "0.9.0"
-git = { url = "https://github.com/tttmmmyyyy/fixlang-gmp.git", rev = "3d1d7b4f73f589cd1f6b8e3f8f52e56cea618389" }
+git = { url = "https://github.com/tttmmmyyyy/fixlang-gmp.git", rev = "26d1848491dee2e0979b535e5ee158c66d6a2717" }
