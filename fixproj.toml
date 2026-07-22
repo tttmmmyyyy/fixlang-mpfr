@@ -1,7 +1,7 @@
 [general]
 name = "mpfr-fix"
 version = "0.6.0"
-fix_version = "1.3.0"
+fix_version = "1.5.0"
 description = "MPFR bindings for the Fix programming language."
 
 [build]
@@ -16,4 +16,4 @@ memcheck = true
 [[dependencies]]
 name = "gmp-fix"
 version = "0.9.0"
-git = { url = "https://github.com/tttmmmyyyy/fixlang-gmp.git", rev = "26d1848491dee2e0979b535e5ee158c66d6a2717" }
+git = { url = "https://github.com/tttmmmyyyy/fixlang-gmp.git", rev = "002065bd9884066715f26858b79d787ef14cf380" }
