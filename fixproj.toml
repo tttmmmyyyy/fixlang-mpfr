@@ -1,6 +1,6 @@
 [general]
 name = "mpfr-fix"
-version = "0.6.0"
+version = "0.7.0"
 fix_version = "1.5.0"
 description = "MPFR bindings for the Fix programming language."
 
