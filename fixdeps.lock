@@ -1,13 +1,13 @@
-proj_file_hash = "8bc92b4c089c5f74f39067d1087003d2"
+proj_file_hash = "25a6d98428a3d6a90d80dd00ccffe438"
 
 [[dependencies]]
 name = "gmp-fix"
-version = "0.9.0"
-path = ".fixlang/deps/gmp-fix_0.9.0"
+version = "0.10.0"
+path = ".fixlang/deps/gmp-fix_0.10.0"
 
 [dependencies.git]
 repo = "https://github.com/tttmmmyyyy/fixlang-gmp.git"
-rev = "c32d9b2d32946a79ebc0a31b106a12abc6ec9367"
+rev = "e36e55fd7166eac0108686174d49e1669e5f00a7"
 
 [[dependencies]]
 name = "hash"
