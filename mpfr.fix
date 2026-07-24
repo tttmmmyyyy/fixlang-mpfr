@@ -102,6 +102,12 @@ namespace MPFR {
         (MPFR { _0 : dtor }, res)
     );
 
+    // Whether the MPFR's underlying resource is uniquely owned, paired with the MPFR itself.
+    // An MPFR value is unboxed, so its uniqueness is that of the boxed `Destructor` it holds, tested by
+    // acting on the field with `unsafe_is_unique` (the `(Bool, _)` functor).
+    _is_unique : MPFR -> (Bool, MPFR);
+    _is_unique = |num| num.act__0(unsafe_is_unique);
+
     // Get the precision of an MPFR number.
     // 
     // # Parameters
@@ -114,7 +120,7 @@ namespace MPFR {
     // Apply a unary operation of MPFR (taking (out, in, rnd) as arguments) to an MPFR value.
     _unary_op : RoundMode -> ((MPFRHandle, MPFRHandle, CInt) -> IO CInt) -> MPFR -> (MPFR, CInt);
     _unary_op = |rnd, act, num| (
-        let (is_unique, num) = num.unsafe_is_unique;
+        let (is_unique, num) = num._is_unique;
         let rnd_c = rnd.to_c_rnd;
         if is_unique {
             num._mutate(|num_ptr| act((num_ptr, num_ptr, rnd_c)))
@@ -128,14 +134,14 @@ namespace MPFR {
     // Apply a binary operation of MPFR (taking (out, lhs, rhs, rnd) as arguments) to two MPFR values.
     _binary_op : RoundMode -> Precision -> ((MPFRHandle, MPFRHandle, MPFRHandle, CInt) -> IO CInt) -> MPFR -> MPFR -> (MPFR, CInt);
     _binary_op = |rnd, prec, act, lhs, rhs| (
-        let (is_unique, lhs) = lhs.unsafe_is_unique;
+        let (is_unique, lhs) = lhs._is_unique;
         let rnd_c = rnd.to_c_rnd;
         if is_unique && lhs.get_prec == prec {
             rhs._borrow(|rhs_ptr|
                 lhs._mutate(|lhs_ptr| act((lhs_ptr, lhs_ptr, rhs_ptr, rnd_c)))
             )
         };
-        let (is_unique, rhs) = rhs.unsafe_is_unique;
+        let (is_unique, rhs) = rhs._is_unique;
         if is_unique && rhs.get_prec == prec {
             lhs._borrow(|lhs_ptr|
                 rhs._mutate(|rhs_ptr| act((rhs_ptr, lhs_ptr, rhs_ptr, rnd_c)))
