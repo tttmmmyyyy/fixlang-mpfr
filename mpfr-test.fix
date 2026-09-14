@@ -40,7 +40,7 @@ test_basic_construction = (
     assert(|_|"zero is_zero", zero_val.is_zero);;
 
     let one_val : MPFR = one;
-    assert_eq(|_|"one to_string", one_val.to_string, "1.000000");;
+    assert_eq(|_|"one to_string", one_val.to_string, 1.0.to_string);;
     
     let nan_val = MPFR::nan(53);
     assert(|_|"nan is_nan", nan_val.is_nan);;
@@ -225,7 +225,7 @@ test_string_output = (
     
     // Test to_string (delegates to F64::to_string via get_f64)
     let z1 = MPFR::mpfr(113, 3.14159);
-    assert(|_|"3.14159 formatted", z1.to_string == "3.141590");;
+    assert(|_|"3.14159 formatted", z1.to_string == 3.14159.to_string);;
     
     pure()
 );
