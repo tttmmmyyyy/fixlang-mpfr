@@ -1,7 +1,7 @@
 // Tests for MPFR module
 module Test;
 
-import GMP.Q::{MPQ::mpq};
+import GMP.Q::{MPQ::{init_set_str, mpq}};
 import GMP.Z::{MPZ, MPZ::{init_set_str, mpz}};
 import MPFR::{
     MPFR, 
@@ -157,6 +157,22 @@ test_gmp_conversion = (
     assert_eq(|_|"MPFR -> MPQ integer", MPFR::mpfr_i(53, 5).get_q.as_some, mpq(5, 1));;
     assert(|_|"MPFR -> MPQ NaN", MPFR::nan(53).get_q.is_none);;
     assert(|_|"MPFR -> MPQ -Inf", MPFR::neg_inf(53).get_q.is_none);;
+
+    // 2^100 + 1 has 101 significant bits, more than an F64 holds.
+    let big_odd_str = "1267650600228229401496703205377";
+    let big_odd_z = MPZ::init_set_str(big_odd_str, 10).as_some;
+    let big_odd_fr = MPFR::mpfr_str(101, big_odd_str, 10).as_some;
+    assert(|_|"MPZ -> MPFR beyond F64 precision", MPFR::mpfr_z(101, big_odd_z) == big_odd_fr);;
+    assert_eq(|_|"MPFR -> MPZ beyond F64 precision", big_odd_fr.get_z.as_some, big_odd_z);;
+
+    // 1/3 = 0.010101...b lies between the 2-bit values 1/4 and 3/8, and is nearer to 3/8.
+    assert_eq(|_|"MPQ -> MPFR rounds to nearest", MPFR::mpfr_q(2, mpq(1, 3)).get_f64, 0.375);;
+    assert(|_|"MPQ -> MPFR is correctly rounded at 113 bits",
+        MPFR::mpfr_q(113, mpq(1, 3)) == MPFR::mpfr_i(113, 1) / MPFR::mpfr_i(113, 3));;
+
+    // (2^100 + 1) / 2^60 has 101 significant bits, more than an F64 holds.
+    let fine = MPQ::init_set_str("1267650600228229401496703205377/1152921504606846976", 10).as_some;
+    assert_eq(|_|"MPQ -> MPFR -> MPQ beyond F64 precision", MPFR::mpfr_q(101, fine).get_q.as_some, fine);;
 
     pure()
 );
