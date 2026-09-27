@@ -3,6 +3,8 @@
 // This is a wrapper for the GNU MPFR (Multiple Precision Floating-Point Reliable) Library.
 module MPFR;
 
+import GMP.Q::{MPQ, MPQ::{_borrow, _init_by}};
+import GMP.Z::{MPZ, MPZ::{_borrow, _init_by}};
 import Std::{
     undefined, unsafe_is_unique, Add, Bool, Div, Eq, F64, I64, IO, LessThan, LessThanOrEq, Mul, Neg, One, 
     Option, Ptr, String, Sub, ToString, U64, Zero, Array::{fill, to_iter}, Box::{make, @value}, 
@@ -193,6 +195,36 @@ namespace MPFR {
         num
     );
 
+    // Create an MPFR value from an MPZ with specified precision.
+    //
+    // # Parameters
+    // - `prec`: The precision in bits.
+    // - `val`: The MPZ value to convert.
+    mpfr_z : Precision -> MPZ -> MPFR;
+    mpfr_z = |prec, val| (
+        val._borrow(|val_ptr| (
+            let (num, _) = MPFR::_init_by(prec, |ptr|
+                FFI_CALL_IO[CInt mpfr_set_z(Ptr, Ptr, CInt), ptr, val_ptr, RoundMode::rndn().to_c_rnd]
+            );
+            num
+        ))
+    );
+
+    // Create an MPFR value from an MPQ with specified precision.
+    //
+    // # Parameters
+    // - `prec`: The precision in bits.
+    // - `val`: The MPQ value to convert.
+    mpfr_q : Precision -> MPQ -> MPFR;
+    mpfr_q = |prec, val| (
+        val._borrow(|val_ptr| (
+            let (num, _) = MPFR::_init_by(prec, |ptr|
+                FFI_CALL_IO[CInt mpfr_set_q(Ptr, Ptr, CInt), ptr, val_ptr, RoundMode::rndn().to_c_rnd]
+            );
+            num
+        ))
+    );
+
     // Create an MPFR value from a string with specified precision and base.
     // 
     // # Parameters
@@ -288,6 +320,42 @@ namespace MPFR {
         num._borrow(|ptr| 
             FFI_CALL[CDouble mpfr_get_d(Ptr, CInt), ptr, RoundMode::rndn().to_c_rnd]
         )
+    );
+
+    // Convert an MPFR value to MPZ.
+    //
+    // Rounds toward zero. Returns none if the value is NaN or infinite.
+    //
+    // # Parameters
+    // - `x`: The MPFR number to convert.
+    get_z : MPFR -> Option MPZ;
+    get_z = |num| (
+        if !num.is_number { Option::none() };
+        num._borrow(|ptr| (
+            let (val, _) = MPZ::_init_by(|val_ptr| (
+                FFI_CALL_IO[() __gmpz_init(Ptr), val_ptr];;
+                FFI_CALL_IO[CInt mpfr_get_z(Ptr, Ptr, CInt), val_ptr, ptr, RoundMode::rndz().to_c_rnd]
+            ));
+            Option::some $ val
+        ))
+    );
+
+    // Convert an MPFR value to MPQ exactly.
+    //
+    // Returns none if the value is NaN or infinite.
+    //
+    // # Parameters
+    // - `x`: The MPFR number to convert.
+    get_q : MPFR -> Option MPQ;
+    get_q = |num| (
+        if !num.is_number { Option::none() };
+        num._borrow(|ptr| (
+            let (val, _) = MPQ::_init_by(|val_ptr| (
+                FFI_CALL_IO[() __gmpq_init(Ptr), val_ptr];;
+                FFI_CALL_IO[() mpfr_get_q(Ptr, Ptr), val_ptr, ptr]
+            ));
+            Option::some $ val
+        ))
     );
 
     // Get the number of digits required to represent an MPFR value in a given base.

@@ -1,14 +1,16 @@
 // Tests for MPFR module
 module Test;
 
+import GMP.Q::{MPQ::{init_set_str, mpq}};
+import GMP.Z::{MPZ, MPZ::{init_set_str, mpz}};
 import MPFR::{
     MPFR, 
     MPFR::{
         abs, add, asin, asinh, atan2, cbrt, ceil, cmp, const_catalan, const_euler, const_log2, const_pi, 
         copysign, cos, cosh, digamma, div, div_2si, div_2ui, erf, erfc, exp, exp10, exp2, expm1, fac_ui, 
-        floor, fma, fmod, gamma, get_f64, get_prec, get_si, get_str, get_str_ndigits, get_ui, hypot, inf, 
+        floor, fma, fmod, gamma, get_f64, get_prec, get_q, get_si, get_str, get_str_ndigits, get_ui, get_z, hypot, inf, 
         is_inf, is_nan, is_number, is_zero, j0, j1, lngamma, log, log10, log1p, log2, max, min, mpfr, mpfr_i, 
-        mpfr_str, mpfr_ui, mul_2ui, nan, neg_inf, pow, pow_ui, rootn_ui, round, sec, sech, sgn, signbit, sin, 
+        mpfr_q, mpfr_str, mpfr_ui, mpfr_z, mul_2ui, nan, neg_inf, pow, pow_ui, rootn_ui, round, sec, sech, sgn, signbit, sin, 
         sinh, sqr, sqrt, sub, tanh, to_string_digits, to_string_exp, to_string_exp_digits, 
         to_string_exp_precision, to_string_precision, trunc, zeta_ui
     }, 
@@ -128,6 +130,49 @@ test_conversion = (
     let z = MPFR::mpfr(113, 2.718281828);
     let z_f64 = z.get_f64;
     assert(|_|"MPFR to F64", (z_f64 - 2.718281828).abs < 0.00000001);;
+
+    pure()
+);
+
+test_gmp_conversion : IO ();
+test_gmp_conversion = (
+    // 2^100 needs 101 bits as an integer but only 1 bit of mantissa, so it round-trips at 53 bits.
+    let big = MPZ::init_set_str("1267650600228229401496703205376", 10).as_some;
+    assert_eq(|_|"MPZ -> MPFR -> MPZ", MPFR::mpfr_z(53, big).get_z.as_some, big);;
+    assert_eq(|_|"MPZ -> MPFR negative", MPFR::mpfr_z(53, mpz(-42)).get_si.as_some, -42);;
+
+    // 7 = 0b111 rounds to nearest 2-bit value: 6 and 8 tie, and 8 has the even mantissa.
+    assert_eq(|_|"MPZ -> MPFR rounds to nearest", MPFR::mpfr_z(2, mpz(7)).get_si.as_some, 8);;
+
+    assert_eq(|_|"MPQ -> MPFR exact", MPFR::mpfr_q(53, mpq(3, 8)).get_f64, 0.375);;
+    let third = MPFR::mpfr_q(113, mpq(1, 3));
+    assert(|_|"MPQ -> MPFR inexact", (third.get_f64 - 1.0 / 3.0).abs < 1.0e-15);;
+
+    assert_eq(|_|"MPFR -> MPZ rounds toward zero", MPFR::mpfr(53, 2.7).get_z.as_some, mpz(2));;
+    assert_eq(|_|"MPFR -> MPZ negative rounds toward zero", MPFR::mpfr(53, -2.7).get_z.as_some, mpz(-2));;
+    assert(|_|"MPFR -> MPZ NaN", MPFR::nan(53).get_z.is_none);;
+    assert(|_|"MPFR -> MPZ Inf", MPFR::inf(53).get_z.is_none);;
+
+    assert_eq(|_|"MPFR -> MPQ", MPFR::mpfr(53, -0.375).get_q.as_some, mpq(-3, 8));;
+    assert_eq(|_|"MPFR -> MPQ integer", MPFR::mpfr_i(53, 5).get_q.as_some, mpq(5, 1));;
+    assert(|_|"MPFR -> MPQ NaN", MPFR::nan(53).get_q.is_none);;
+    assert(|_|"MPFR -> MPQ -Inf", MPFR::neg_inf(53).get_q.is_none);;
+
+    // 2^100 + 1 has 101 significant bits, more than an F64 holds.
+    let big_odd_str = "1267650600228229401496703205377";
+    let big_odd_z = MPZ::init_set_str(big_odd_str, 10).as_some;
+    let big_odd_fr = MPFR::mpfr_str(101, big_odd_str, 10).as_some;
+    assert(|_|"MPZ -> MPFR beyond F64 precision", MPFR::mpfr_z(101, big_odd_z) == big_odd_fr);;
+    assert_eq(|_|"MPFR -> MPZ beyond F64 precision", big_odd_fr.get_z.as_some, big_odd_z);;
+
+    // 1/3 = 0.010101...b lies between the 2-bit values 1/4 and 3/8, and is nearer to 3/8.
+    assert_eq(|_|"MPQ -> MPFR rounds to nearest", MPFR::mpfr_q(2, mpq(1, 3)).get_f64, 0.375);;
+    assert(|_|"MPQ -> MPFR is correctly rounded at 113 bits",
+        MPFR::mpfr_q(113, mpq(1, 3)) == MPFR::mpfr_i(113, 1) / MPFR::mpfr_i(113, 3));;
+
+    // (2^100 + 1) / 2^60 has 101 significant bits, more than an F64 holds.
+    let fine = MPQ::init_set_str("1267650600228229401496703205377/1152921504606846976", 10).as_some;
+    assert_eq(|_|"MPQ -> MPFR -> MPQ beyond F64 precision", MPFR::mpfr_q(101, fine).get_q.as_some, fine);;
 
     pure()
 );
@@ -986,6 +1031,7 @@ test = (
     test_arithmetic;;
     test_comparison;;
     test_conversion;;
+    test_gmp_conversion;;
     test_special_values;;
     test_precision;;
     test_string_conversion;;

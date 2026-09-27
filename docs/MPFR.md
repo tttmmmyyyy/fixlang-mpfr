@@ -1,6 +1,6 @@
 # MPFR
 
-Defined in mpfr-fix@0.6.0
+Defined in mpfr-fix@0.7.1
 
 Provides arbitrary-precision floating-point type `MPFR` and related functions.
 
@@ -478,6 +478,18 @@ Get the precision of an MPFR number.
 
 - `x`: The number to get precision of.
 
+#### get_q
+
+Type: `MPFR::MPFR -> Std::Option GMP.Q::MPQ`
+
+Convert an MPFR value to MPQ exactly.
+
+Returns none if the value is NaN or infinite.
+
+##### Parameters
+
+- `x`: The MPFR number to convert.
+
 #### get_si
 
 Type: `MPFR::MPFR -> Std::Option Std::I64`
@@ -532,6 +544,18 @@ Type: `MPFR::MPFR -> Std::Option Std::U64`
 Convert an MPFR value to U64.
 
 Rounds toward zero. Returns none if the value doesn't fit in U64.
+
+##### Parameters
+
+- `x`: The MPFR number to convert.
+
+#### get_z
+
+Type: `MPFR::MPFR -> Std::Option GMP.Z::MPZ`
+
+Convert an MPFR value to MPZ.
+
+Rounds toward zero. Returns none if the value is NaN or infinite.
 
 ##### Parameters
 
@@ -745,6 +769,17 @@ Create an MPFR value from an I64 with specified precision.
 - `prec`: The precision in bits.
 - `val`: The I64 value to convert.
 
+#### mpfr_q
+
+Type: `MPFR::Precision -> GMP.Q::MPQ -> MPFR::MPFR`
+
+Create an MPFR value from an MPQ with specified precision.
+
+##### Parameters
+
+- `prec`: The precision in bits.
+- `val`: The MPQ value to convert.
+
 #### mpfr_str
 
 Type: `MPFR::Precision -> Std::String -> Std::I64 -> Std::Option MPFR::MPFR`
@@ -767,6 +802,17 @@ Create an MPFR value from a U64 with specified precision.
 
 - `prec`: The precision in bits.
 - `val`: The U64 value to convert.
+
+#### mpfr_z
+
+Type: `MPFR::Precision -> GMP.Z::MPZ -> MPFR::MPFR`
+
+Create an MPFR value from an MPZ with specified precision.
+
+##### Parameters
+
+- `prec`: The precision in bits.
+- `val`: The MPZ value to convert.
 
 #### mul
 
