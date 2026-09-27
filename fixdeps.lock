@@ -1,4 +1,4 @@
-proj_file_hash = "25a6d98428a3d6a90d80dd00ccffe438"
+proj_file_hash = "8e00d8d2833b437c2355f28883e2e5e5"
 
 [[dependencies]]
 name = "gmp-fix"
@@ -11,9 +11,9 @@ rev = "e36e55fd7166eac0108686174d49e1669e5f00a7"
 
 [[dependencies]]
 name = "hash"
-version = "1.1.2"
-path = ".fixlang/deps/hash_1.1.2"
+version = "1.1.3"
+path = ".fixlang/deps/hash_1.1.3"
 
 [dependencies.git]
 repo = "https://github.com/tttmmmyyyy/fixlang-hash.git"
-rev = "dbf95379b6ee7b26ec4858116f24c0251467cb83"
+rev = "089e73272bff2a97131736c54c07511425a69ed6"
