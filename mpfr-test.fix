@@ -10,7 +10,7 @@ import MPFR::{
         copysign, cos, cosh, digamma, div, div_2si, div_2ui, erf, erfc, exp, exp10, exp2, expm1, fac_ui, 
         floor, fma, fmod, gamma, get_f64, get_prec, get_q, get_si, get_str, get_str_ndigits, get_ui, get_z, hypot, inf, 
         is_inf, is_nan, is_number, is_zero, j0, j1, lngamma, log, log10, log1p, log2, max, min, mpfr, mpfr_i, 
-        mpfr_q, mpfr_str, mpfr_ui, mpfr_z, mul_2ui, nan, neg_inf, pow, pow_ui, rootn_ui, round, sec, sech, sgn, signbit, sin, 
+        mpfr_q, mpfr_str, mpfr_ui, mpfr_z, mul_2ui, nan, neg_inf, nexttoward, pow, pow_ui, remainder, rootn_ui, round, sec, sech, sgn, signbit, sin, 
         sinh, sqr, sqrt, sub, tanh, to_string_digits, to_string_exp, to_string_exp_digits, 
         to_string_exp_precision, to_string_precision, trunc, zeta_ui
     }, 
@@ -683,7 +683,7 @@ test_power_root = (
     // Test pow
     let base = MPFR::mpfr_i(113, 2);
     let exp = MPFR::mpfr_i(113, 10);
-    let result = MPFR::pow(base, exp);
+    let result = base.pow(exp);
     assert_eq(|_|"pow(2, 10)", result.get_si.as_some, 1024);;
 
     // Test pow_ui
@@ -952,7 +952,7 @@ test_advanced_math = (
     // Test fmod: fmod(7, 3) = 1
     let p = MPFR::mpfr_i(113, 7);
     let q = MPFR::mpfr_i(113, 3);
-    let fm = MPFR::fmod(p, q);
+    let fm = p.fmod(q);
     assert_eq(|_|"fmod(7, 3)", fm.get_si.as_some, 1);;
     
     pure()
@@ -1014,8 +1014,12 @@ test_utilities = (
     // Test copysign: copysign(5, -3) = -5
     let x = MPFR::mpfr(113, 5.0);
     let y = MPFR::mpfr(113, -3.0);
-    let result = MPFR::copysign(x, y);
+    let result = x.copysign(y);
     assert_eq(|_|"copysign(5, -3)", result.get_si.as_some, -5);;
+    // remainder(7, 4) = -1, as 7 / 4 = 1.75 rounds to 2.
+    assert_eq(|_|"remainder(7, 4)", mpfr(53, 7.0).remainder(mpfr(53, 4.0)).get_si.as_some, -1);;
+    // nexttoward moves 1 toward 2, to above 1.
+    assert(|_|"nexttoward(1, 2)", mpfr(53, 1.0).nexttoward(mpfr(53, 2.0)) > mpfr(53, 1.0));;
     
     // Test const_catalan
     let catalan = MPFR::const_catalan(113);

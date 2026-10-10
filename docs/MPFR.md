@@ -1,6 +1,6 @@
 # MPFR
 
-Defined in mpfr-fix@0.7.1
+Defined in mpfr-fix@0.8.0
 
 Provides arbitrary-precision floating-point type `MPFR` and related functions.
 
@@ -234,12 +234,12 @@ Mathematical constant Pi.
 
 Type: `MPFR::MPFR -> MPFR::MPFR -> MPFR::MPFR`
 
-Copy the sign of y to x.
+Copy the sign of y to x. `x.copysign(y)` has the magnitude of x and the sign of y.
 
 ##### Parameters
 
-- `x`: The number to copy magnitude from.
 - `y`: The number to copy sign from.
+- `x`: The number to copy magnitude from.
 
 #### cos
 
@@ -454,11 +454,12 @@ Fused multiply-add: (x * y) + z, computed with a single rounding.
 Type: `MPFR::MPFR -> MPFR::MPFR -> MPFR::MPFR`
 
 Floating-point remainder: x - n*y where n is the integer quotient x/y rounded toward zero.
+`x.fmod(y)` is the remainder of x divided by y.
 
 ##### Parameters
 
-- `x`: The dividend.
 - `y`: The divisor.
+- `x`: The dividend.
 
 #### gamma
 
@@ -922,29 +923,30 @@ Return the next floating-point number toward -infinity.
 
 Type: `MPFR::MPFR -> MPFR::MPFR -> MPFR::MPFR`
 
-Return the next floating-point number in the direction of y.
+Return the next floating-point number after x in the direction of y. `x.nexttoward(y)` moves
+x toward y.
 
 ##### Parameters
 
+- `y`: The direction to move toward.
 - `x`: The starting number.
-- `direction`: The direction to move toward.
 
 #### pow
 
 Type: `MPFR::MPFR -> MPFR::MPFR -> MPFR::MPFR`
 
-Power function: base^exponent.
+Power function: base^exponent. `x.pow(y)` is x^y.
 
 ##### Parameters
 
+- `exp`: The exponent.
 - `base`: The base.
-- `exponent`: The exponent.
 
 ##### Examples
 
 ```fix
 // 2^10
-assert_eq(|_|"", pow(mpfr(53, 2.0), mpfr(53, 10.0)), mpfr(53, 1024.0))
+assert_eq(|_|"", mpfr(53, 2.0).pow(mpfr(53, 10.0)), mpfr(53, 1024.0))
 ```
 
 #### pow_si
@@ -984,17 +986,18 @@ Reciprocal square root of an MPFR number.
 Type: `MPFR::MPFR -> MPFR::MPFR -> MPFR::MPFR`
 
 IEEE remainder: x - n*y where n is the integer quotient x/y rounded to nearest.
+`x.remainder(y)` is the remainder of x divided by y.
 
 ##### Parameters
 
-- `x`: The dividend.
 - `y`: The divisor.
+- `x`: The dividend.
 
 ##### Examples
 
 ```fix
 // 7 / 4 = 1.75 rounds to 2, so the remainder is 7 - 2 * 4.
-assert_eq(|_|"", remainder(mpfr(53, 7.0), mpfr(53, 4.0)), mpfr(53, -1.0))
+assert_eq(|_|"", mpfr(53, 7.0).remainder(mpfr(53, 4.0)), mpfr(53, -1.0))
 ```
 
 #### rootn_ui
