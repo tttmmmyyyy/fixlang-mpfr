@@ -6,6 +6,20 @@ Provides arbitrary-precision floating-point type `MPFR` and related functions.
 
 This is a wrapper for the GNU MPFR (Multiple Precision Floating-Point Reliable) Library.
 
+Every constructor takes the precision in bits as its first argument: `mpfr` from an `F64`, `mpfr_i` from an `I64`,
+`mpfr_str` from a string. Operations round to nearest (ties to even), and the result of `+`, `-`, `*` and `/`
+has the larger precision of the two operands.
+`to_string` converts the value through `F64`; to see all the digits, use `to_string_digits` or `get_str`.
+
+```fix
+let two = mpfr(113, 2.0);
+let r = two.sqrt;
+assert_eq(|_|"", r.get_prec, 113);;
+assert_eq(|_|"", r.to_string_digits(30), "1.41421356237309504880168872421");;
+let tenth = mpfr_str(113, "0.1", 10).as_some;
+assert_eq(|_|"", (tenth * mpfr_i(113, 3)).to_string_digits(30), "0.300000000000000000000000000000")
+```
+
 ## Values
 
 ### namespace MPFR
@@ -510,7 +524,6 @@ Convert an MPFR value to a string in a given base with specified number of digit
 
 Returns a tuple of (mantissa_string, exponent) where the mantissa is a fraction
 with an implicit radix point immediately to the left of the first digit.
-For example, the number -3.1416 would be returned as ("-31416", 1).
 
 If the number is NaN, returns ("@NaN@", 0).
 If the number is +Inf, returns ("@Inf@", 0).
@@ -522,6 +535,13 @@ If the number is -Inf, returns ("-@Inf@", 0).
 - `n_digits`: Number of significant digits (0 means use get_str_ndigits with the number's precision).
 - `rnd`: The rounding mode to use.
 - `num`: The MPFR number to convert.
+
+##### Examples
+
+```fix
+// -3.1416 is -0.31416 * 10^1.
+assert_eq(|_|"", mpfr(53, -3.1416).get_str(10, 5, rndn()), ("-31416", 1))
+```
 
 #### get_str_ndigits
 
@@ -920,6 +940,13 @@ Power function: base^exponent.
 - `base`: The base.
 - `exponent`: The exponent.
 
+##### Examples
+
+```fix
+// 2^10
+assert_eq(|_|"", pow(mpfr(53, 2.0), mpfr(53, 10.0)), mpfr(53, 1024.0))
+```
+
 #### pow_si
 
 Type: `Std::I64 -> MPFR::MPFR -> MPFR::MPFR`
@@ -962,6 +989,13 @@ IEEE remainder: x - n*y where n is the integer quotient x/y rounded to nearest.
 
 - `x`: The dividend.
 - `y`: The divisor.
+
+##### Examples
+
+```fix
+// 7 / 4 = 1.75 rounds to 2, so the remainder is 7 - 2 * 4.
+assert_eq(|_|"", remainder(mpfr(53, 7.0), mpfr(53, 4.0)), mpfr(53, -1.0))
+```
 
 #### rootn_ui
 
@@ -1122,6 +1156,12 @@ The output format is standard decimal notation with exactly `digits` significant
 - `digits`: The number of significant digits.
 - `num`: The MPFR number to convert.
 
+##### Examples
+
+```fix
+assert_eq(|_|"", const_pi(113).to_string_digits(30), "3.14159265358979323846264338328")
+```
+
 #### to_string_exp
 
 Type: `MPFR::MPFR -> Std::String`
@@ -1148,6 +1188,12 @@ The output format is "d.ddd...e±exp" with exactly `digits` significant digits
 
 - `digits`: The number of significant digits.
 - `num`: The MPFR number to convert.
+
+##### Examples
+
+```fix
+assert_eq(|_|"", mpfr(53, 1234.5).to_string_exp_digits(3), "1.23e+3")
+```
 
 #### to_string_exp_precision
 
