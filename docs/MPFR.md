@@ -1,6 +1,6 @@
 # MPFR
 
-Defined in mpfr-fix@0.8.0
+Defined in mpfr-fix@0.9.0
 
 Provides arbitrary-precision floating-point type `MPFR` and related functions.
 
@@ -9,7 +9,8 @@ This is a wrapper for the GNU MPFR (Multiple Precision Floating-Point Reliable) 
 Every constructor takes the precision in bits as its first argument: `mpfr` from an `F64`, `mpfr_i` from an `I64`,
 `mpfr_str` from a string. Operations round to nearest (ties to even), and the result of `+`, `-`, `*` and `/`
 has the larger precision of the two operands.
-`to_string` converts the value through `F64`; to see all the digits, use `to_string_digits` or `get_str`.
+`to_string` and `format` convert the value through `F64`; to see all the digits, use `to_string_digits` or
+`get_str`.
 
 ```fix
 let two = mpfr(113, 2.0);
@@ -1353,6 +1354,11 @@ Type: `()`
 ### impl `MPFR::MPFR : Std::Div`
 
 ### impl `MPFR::MPFR : Std::Eq`
+
+### impl `MPFR::MPFR : Std::Format`
+
+Writes the value converted to `F64`, as `to_string` does. To write all the digits, write the text
+that `to_string_digits` or `get_str` makes.
 
 ### impl `MPFR::MPFR : Std::LessThan`
 
