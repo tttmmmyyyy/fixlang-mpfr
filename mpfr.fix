@@ -5,7 +5,8 @@
 // Every constructor takes the precision in bits as its first argument: `mpfr` from an `F64`, `mpfr_i` from an `I64`,
 // `mpfr_str` from a string. Operations round to nearest (ties to even), and the result of `+`, `-`, `*` and `/`
 // has the larger precision of the two operands.
-// `to_string` converts the value through `F64`; to see all the digits, use `to_string_digits` or `get_str`.
+// `to_string` and `format` convert the value through `F64`; to see all the digits, use `to_string_digits` or
+// `get_str`.
 // 
 // ```fix
 // let two = mpfr(113, 2.0);
@@ -20,12 +21,12 @@ module MPFR;
 import GMP.Q::{MPQ, MPQ::{_borrow, _init_by}};
 import GMP.Z::{MPZ, MPZ::{_borrow, _init_by}};
 import Std::{
-    undefined, unsafe_is_unique, Add, Bool, Div, Eq, F64, I64, IO, LessThan, LessThanOrEq, Mul, Neg, One, 
-    Option, Ptr, String, Sub, ToString, U64, Zero, Array::{fill, to_iter}, Box::{make, @value}, 
+    undefined, unsafe_is_unique, Add, Bool, Div, Eq, F64, Format, I64, IO, LessThan, LessThanOrEq, Mul, 
+    Neg, One, Option, Ptr, String, Sub, ToString, U64, Zero, Array::{fill, to_iter}, Box::{@value, make}, 
     FFI::{mutate_boxed, CInt, CSizeT, Destructor, Destructor::{borrow, make, mutate_unique}}, 
-    IO::unsafe_perform, Iterator::{check_all, check_any, fold}, LessThan::max, Monad::pure, 
-    Option::{none, some}, 
-    String::{borrow_c_str, get_sub, starts_with, strip_last_bytes, to_iter_bytes, unsafe_from_c_str_ptr_io, @size}, 
+    Format::write_text, IO::unsafe_perform, Iterator::{check_all, check_any, fold}, LessThan::max, 
+    Monad::pure, Option::{none, some}, 
+    String::{@size, borrow_c_str, get_sub, starts_with, strip_last_bytes, to_iter_bytes, unsafe_from_c_str_ptr_io}, 
     ToCInt::c_int, ToCLong::c_long, ToCSizeT::c_size_t, ToCUnsignedLong::c_unsigned_long, ToI64::i64, 
     ToString::to_string, Tuple2::@0
 };
@@ -2148,4 +2149,10 @@ impl MPFR : LessThanOrEq {
 
 impl MPFR : ToString {
     to_string = |num| num.get_f64.to_string;
+}
+
+// Writes the value converted to `F64`, as `to_string` does. To write all the digits, write the text
+// that `to_string_digits` or `get_str` makes.
+impl MPFR : Format {
+    write_text = |num, out| out.write_text(num.get_f64);
 }
